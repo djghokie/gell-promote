@@ -1,0 +1,21 @@
+{
+  "name": "gell-promote",
+  "version": "0.0.1",
+  "description": "Package for new or experimental gell features and bug fixes",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --recursive"
+  },
+  "keywords": [
+    "gell"
+  ],
+  "author": "Daniel Gay",
+  "license": "ISC",
+  "dependencies": {
+    "gell": "^1.18.0",
+    "gell-aws-dynamodb": "^0.24.0",
+    "gell-domain": "^0.2.1",
+    "gell-runtime": "^0.6.1",
+    "gell-session": "^1.10.0"
+  }
+}
