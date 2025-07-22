@@ -43,11 +43,11 @@ exports.action = async function({ params={}, context={}, deps }) {
 		})
 	})
 
-	const roster = upload.single(formDataParameter);
+	const uploadF = upload.single(formDataParameter);
 	const { req, res } = context;
 
 	return new Promise((resolve, reject) => {
-		roster(req, res, err => {
+		uploadF(req, res, err => {
 			if (err) return reject(err);
 
 			resolve(req.file);
