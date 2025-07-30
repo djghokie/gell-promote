@@ -27,16 +27,16 @@ exports.action = async function({ params={}, context={}, deps }) {
 
     logger.info('executing action (name="s3.upload")');
 
-    const { bucket, key, formDataParameter="file" } = params;
+    const { bucket, key, formDataParameter="file", metadata } = params;
     
 	const upload = multer({
 		storage: multerS3({
 			s3,
 			bucket,
 			contentType: multerS3.AUTO_CONTENT_TYPE,
-			// metadata: function (req, file, cb) {
-				// cb(null, { jobId: job_.get('id') });
-		  	// },
+			metadata: function (req, file, cb) {
+                if (metadata) cb(null, metadata);
+		  	},
 		  	key: function (req, file, cb) {
 				cb(null, key);
 		  	}
