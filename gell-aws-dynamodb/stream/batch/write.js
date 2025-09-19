@@ -1,6 +1,13 @@
+const _ = require('lodash');
 const assert = require('assert');
+const when = require('when');
 
 const { BatchWriteCommand } = require("@aws-sdk/lib-dynamodb");
+
+const DEFAULT_OPTIONS = {
+    batchSize: 20,
+    throttleMs: 0
+}
 
 /**
  * Implements a batch write sink
@@ -39,7 +46,9 @@ module.exports = async function* batch(TableName, deps, options={}) {
         return dynamodb.send(new BatchWriteCommand(params));
     }
 
-    const batchSize = 20;
+    const defaultedOptions = _.defaults(options, DEFAULT_OPTIONS);
+
+    const { batchSize, throttleMs } = defaultedOptions;
 
     let items = [];
 	let item = yield;
@@ -52,8 +61,10 @@ module.exports = async function* batch(TableName, deps, options={}) {
                 await commit(items);
     
                 items = [];
+
+                if (throttleMs) await when(true).delay(throttleMs);
             }
-    
+
             item = yield;
         }
     } finally {
