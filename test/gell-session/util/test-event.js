@@ -9,12 +9,13 @@ const MockStore = require('gell-aws-dynamodb/mock/store');
 const operationWrapper = require('gell-aws-dynamodb/operation-wrapper');
 const sessionOperations = operationWrapper.ut(require('gell-session/dynamodb/operations'));
 
-const { createUpdate } = require('../../../gell-session/util/event');
+const { createInitiate, createUpdate } = require('../../../gell-session/util/event');
 
 const TYPE = "TEST";
 
 const model = {
     extends: [session.model],
+    parent: Object.assign({}, session, { TYPE: 'TEST#PARENT' }),
     attributes: {
         type: {
             type: 'string',
@@ -23,6 +24,10 @@ const model = {
         title: {
             type: 'string',
             editable: true
+        },
+        message: {
+            type: 'string',
+            default: 'gello!'
         }
     }
 }
@@ -43,6 +48,101 @@ describe('event generation utility', function() {
 	    store.writeOptions.namedOperations = sessionOperations;  // NOTE: named operation not working for some reaons
 
         this.deps.define('store', store);
+    })
+
+    describe('initiate', function() {
+        let initiate, parent_;
+
+        beforeEach(async function() {
+            const parentType = Object.assign({}, session, { TYPE: 'TEST#PARENT' });
+
+            parent_ = parentType.materialize();
+            await store.save(parent_);
+
+            initiate = createInitiate({}, type, parentType);
+        })
+    
+        describe('action', function() {
+            beforeEach(function() {
+                this.initiate = async function(params={}) {
+                    const $txn = store.write();
+
+                    params.parentId = parent_.id;
+
+                    const session_ = initiate.action({
+                        params,
+                        context: { $txn }, 
+                        deps: this.deps
+                    });
+
+                    await $txn.return().value;
+
+                    return session_;
+                }
+            })
+
+            it('with no defaults (except domain)', async function() {
+                const session_ = await this.initiate();
+
+                // const [session$] = store.select({ type: type.TYPE });
+                const session$ = session_.snapshot();
+
+                assert.strictEqual(session$.type, 'TEST');
+                assert.strictEqual(session$.message, 'gello!');
+                assert.strictEqual(session$.parentId, parent_.id);
+            })
+
+            it('with parameter defaults', async function() {
+                const session_ = await this.initiate({ message: 'world!' });
+
+                // const [session$] = store.select({ type: type.TYPE });
+                const session$ = session_.snapshot();
+
+                assert.strictEqual(session$.type, 'TEST');
+                assert.strictEqual(session$.message, 'world!');
+                assert.strictEqual(session$.parentId, parent_.id);
+            })
+        })
+
+        describe('effect', function() {
+            beforeEach(function() {
+                this.initiate = async function(params={}, p_=parent_) {
+                    const $txn = store.write();
+
+                    const session_ = initiate.effect({
+                        params,
+                        context: { parent_: p_, $txn }, 
+                        deps: this.deps
+                    });
+
+                    await $txn.return().value;
+
+                    return session_;
+                }
+            })
+
+            it('with no defaults (except domain)', async function() {
+                const session_ = await this.initiate();
+
+                // const [session$] = store.select({ type: type.TYPE });
+                const session$ = session_.snapshot();
+
+                assert.strictEqual(session$.type, 'TEST');
+                assert.strictEqual(session$.message, 'gello!');
+                assert.strictEqual(session$.parentId, parent_.id);
+            })
+
+            it('with parameter defaults', async function() {
+                const session_ = await this.initiate({ message: 'world!' });
+
+                // const [session$] = store.select({ type: type.TYPE });
+                const session$ = session_.snapshot();
+
+                assert.strictEqual(session$.type, 'TEST');
+                assert.strictEqual(session$.message, 'world!');
+                assert.strictEqual(session$.parentId, parent_.id);
+            })
+        })
     })
 
     describe('update', function() {
