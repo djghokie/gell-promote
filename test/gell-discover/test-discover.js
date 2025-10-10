@@ -53,5 +53,15 @@ describe('module discovery', function() {
 
             assert.strictEqual(type$.name, 'UNITTEST#TYPE');
         })
+
+        it('discovers snapshot correctly', function() {
+            const registry_ = discover([PATH_TEST_MODULES]);
+
+            // console.debug('#####', registry_.snapshot());
+
+            const type$ = registry_.snapshotAttribute('unittest.snapshot');
+
+            assert.strictEqual(type$.name, 'unittest.snapshot');
+        })
     })
 })
