@@ -79,7 +79,7 @@ function createLookup(__metadata={}, type) {
         return doLookup(id, true, null, deps);
     }
 
-    return { effect, api };
+    return { __metadata, effect, api };
 }
 
 module.exports = { createLookup };

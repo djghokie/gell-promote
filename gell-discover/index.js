@@ -40,7 +40,8 @@ module.exports = function discoverModules(paths=[]) {
                     const name = __metadata.name;
 
                     // register(module);
-                    registry_.__events[name] = module;
+                    if (module.action)
+                        registry_.__events[name] = module;
 
                     registry_.set(name, event.materialize(__metadata));
 
