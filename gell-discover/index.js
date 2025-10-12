@@ -57,8 +57,10 @@ module.exports = function discoverModules(paths=[]) {
                  *  - suitable for storing with state
                  */
                 if (model) {
+                    assert(module.TYPE, `type must export "TYPE" attribute to be registered`);
+
                     const name = model.name;
-                    assert(name);
+                    assert(name, `type ${module.TYPE} model must define "name" attribute to be registered`);
 
                     registry_.set(name, type.materialize(model));
 

@@ -10,6 +10,12 @@ const chain = require('./util/chain');
 
 const MESSAGE_MISSING_TRIGGER = 'route (name="%s") does not define trigger function (name="%s")';
 
+function validateMiddleware(middleware) {
+    middleware.forEach(m => {
+        assert(_.isFunction(m));
+    });
+}
+
 /**
  * Trigger execution of an event.  Result of the event is yielded
  * 
@@ -82,6 +88,8 @@ const MESSAGE_MISSING_TRIGGER = 'route (name="%s") does not define trigger funct
 module.exports = function*($resolver, middleware, deps) {
     assert(isIterator($resolver), '$resolver is required');
     assert(deps, 'deps is required');
+
+    validateMiddleware(middleware);
 
     async function dispatch({ route, caller, source, context={}, params={}, deps, invoke=true }) {
         assert(_.isString(route), 'event route is required');
