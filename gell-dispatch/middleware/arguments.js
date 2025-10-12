@@ -1,8 +1,11 @@
+const _ = require('lodash');
+
 const format = require('gell/state/format');
 
 const ErrorState = require('../../gell/error');
 
 const MESSAGE_REQUIRED_PARAMETER = 'call to event trigger (route="%s") does not provide required argument (name="%s")';
+const MESSAGE_PARAMETER_MAXLENGTH = 'call to event trigger (route="%s") has arugment (name="%s") that exceeds maximum allowed length';
 
 /**
  * gell-dispatch middleware that validates event invocation parameters against the event metadata
@@ -33,6 +36,22 @@ module.exports = function(event, resume) {
             e.set('message', format(MESSAGE_REQUIRED_PARAMETER, 'route', 'parameter'));
 
             e.throw();
+        }
+
+        if (param.type === 'string') {
+            if (!_.isString(val)) throw new Error();
+
+            if (param.maxLength) {
+                if (val.length > param.maxLength) {
+                    const e = new ErrorState();
+                    e.set('name', 'ParameterValidationError');
+                    e.set('route', __invocationSpec.route);
+                    e.set('parameter', n);
+                    e.set('message', format(MESSAGE_PARAMETER_MAXLENGTH, 'route', 'parameter'));
+
+                    e.throw();
+                }
+            }
         }
     })
 
