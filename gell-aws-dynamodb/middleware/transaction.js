@@ -26,6 +26,7 @@ module.exports = async function(event, resume) {
     if (!__invocationSpec) return resume(event);
 
     const transactionMode = __invocationSpec.triggerSpec.transaction || 'NONE';
+    const { route, eventName, triggerName } = __invocationSpec;
 
     if (transactionMode === 'NEW') {
         if (context.$txn) {
