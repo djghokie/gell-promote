@@ -17,6 +17,7 @@
     "gell-domain": "^0.2.1",
     "gell-runtime": "^0.6.1",
     "gell-session": "^1.10.0",
+    "gell-web": "^0.5.0",
     "require-all": "^3.0.0"
   }
 }
