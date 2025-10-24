@@ -22,6 +22,7 @@ const REGEX_EXCLUDED_DIRS = /^\.(git)$/;
 module.exports = function discoverModules(paths=[]) {
     const registry_ = registry.materialize();
     registry_.__events = {};
+    registry_.__snapshots = {};
 
     paths.forEach(path => {
         // console.debug('#####', path);
@@ -42,6 +43,9 @@ module.exports = function discoverModules(paths=[]) {
                     // register(module);
                     if (module.action)
                         registry_.__events[name] = module;
+
+                    if (module.api)
+                        registry_.__snapshots[name] = module;
 
                     registry_.set(name, event.materialize(__metadata));
 
