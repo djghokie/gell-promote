@@ -1,7 +1,7 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const discover = require('../../gell-discover');
+const discover = require('../../gell-discover/node');
 
 const PATH_TEST_MODULES = `${__dirname}/modules`
 
