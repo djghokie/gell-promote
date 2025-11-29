@@ -12,11 +12,15 @@ const _ = require('lodash');
  */
 async function runScenario($scenario) {
     do {
-        var next = await $scenario.next();
+        try {
+            var next = await $scenario.next();
+    
+            if (!next.done) var lastYielded = next.value;
+        } catch (e) {
+            console.error('error caught running scenario');
 
-        // console.debug('#####', next);
-
-        if (!next.done) var lastYielded = next.value;
+            throw e;
+        }
     } while (!next.done);
 
     return _.isUndefined(next.value) ? lastYielded : next.value;
