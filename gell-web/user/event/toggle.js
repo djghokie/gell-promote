@@ -21,12 +21,37 @@ exports.__metadata = {
     }
 }
 
+async function doToggle(user_, role, $txn, deps) {
+    const existingRoles = user_.snapshotAttribute('roles') || [];
+    const roleIndex = existingRoles.findIndex(r => r === role);
+    const newRoles = [...existingRoles];
+    if (roleIndex < 0) newRoles.push(role)
+    else newRoles.splice(roleIndex, 1);
+
+    await update.effect({
+        params: {
+            attribute: 'roles',
+            value: newRoles
+        },
+        context: {
+            session_: user_,
+            $txn
+        },
+        deps
+    });
+
+    return user_;
+}
+
 exports.effect = async function({ params={}, context={}, deps }) {
     const { logger } = deps.resolve('logger');
 
     logger.info('executing effect (name="web.role.toggle")');
 
-    throw new Error('NYI');
+    const { role } = params;
+    const { user_ } = context;
+
+    return doToggle(user_, role, context.$txn, deps);
 }
 
 exports.action = async function({ params={}, context={}, deps }) {
@@ -44,23 +69,5 @@ exports.action = async function({ params={}, context={}, deps }) {
         deps
     });
 
-    const existingRoles = user_.snapshotAttribute('roles') || [];
-    const roleIndex = existingRoles.findIndex(r => r === role);
-    const newRoles = [...existingRoles];
-    if (roleIndex < 0) newRoles.push(role)
-    else newRoles.splice(roleIndex, 1);
-
-    await update.effect({
-        params: {
-            attribute: 'roles',
-            value: newRoles
-        },
-        context: {
-            session_: user_,
-            $txn: context.$txn
-        },
-        deps
-    });
-
-    return user_;
+    return doToggle(user_, role, context.$txn, deps);
 }

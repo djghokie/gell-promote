@@ -45,7 +45,10 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     logger.info('executing effect (name="user.create")');
 
-    throw new Error('NYI');
+    const {  applicationType } = params;
+    const { identity_, $txn } = context;
+
+    return doCreate(applicationType, identity_, $txn, deps);
 }
 
 exports.action = async function({ params={}, context={}, deps }) {
