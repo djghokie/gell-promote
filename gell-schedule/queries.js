@@ -1,5 +1,10 @@
 const TABLE = 'dynamodb.table.session';
 
+const packageQueries = require('gell-schedule/queries');
+
+exports['scheduled.type.timerange'] = packageQueries['scheduled.type.timerange'];
+exports['scheduled.type.future'] = packageQueries['scheduled.type.future'];
+
 /**
  * WIP: could probably just merge this with scheduled.type.timerange
  *  - make startTs and endTs optional
