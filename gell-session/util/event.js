@@ -4,6 +4,7 @@ const _ = require('lodash');
 const lookup = require('gell-session/snapshot/lookup');
 const initiate = require('gell-session/event/initiate');
 const update = require('gell-session/event/update');
+const activate = require('gell-session/event/activate');
 
 /**
  * WIP: idea here is that we have a standard approach to basic session initiation event
@@ -28,12 +29,12 @@ const update = require('gell-session/event/update');
  *  - perhaps we could make this optional
  *      - don't think we want to do that tho
  */
-function createInitiate(__metadata={}, type) {
+function createInitiate(__metadata={}, type, options) {
     assert(type, 'gell type is required');
     assert(type.TYPE, 'gell type must export TYPE string');
 
     const { parent: parentType } = type.model;
-    assert(parentType, 'type model must define a parent type');
+    assert(parentType, `type (${type.TYPE}) model must define a parent type`);
     assert(parentType.TYPE, 'parent type must export TYPE string');
 
     const { name } = __metadata;
@@ -49,6 +50,15 @@ function createInitiate(__metadata={}, type) {
         });
 
         session_.set('parentId', parent$.id);
+
+        if (options?.activate) {
+            await activate.effect({
+                context: {
+                    session_
+                },
+                deps
+            });
+        }
 
         return session_;
     }
