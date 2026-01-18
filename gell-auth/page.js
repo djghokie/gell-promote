@@ -48,10 +48,12 @@ exports.protectedPage = function*(allowedRoles, authOptions, f, options=DEFAULT_
     
 		if (allowedRoles) {
             const { role } = session;
+
+            const isAnyRole = allowedRoles.length === 1 && allowedRoles[0] === '*';
             
 			// TODO: probably use lodash intersection
 			// const firstMatching = allowedRoles.find(ar => roles.find(r => r === ar));
-			const firstMatching = allowedRoles.find(ar => ar === role);
+			const firstMatching = isAnyRole ? role : allowedRoles.find(ar => ar === role);
 			if (!firstMatching) {
 				return {
 					redirect: {
