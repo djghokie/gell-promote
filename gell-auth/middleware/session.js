@@ -9,6 +9,13 @@ const browser = require('../../gell-web/domain/browser');
 // const sessionLoader = require('gell-web/middlware/session');
 // const apiAuthorizer = require('gell-web/middlware/authorizer');
 
+/**
+ * Binds the next-auth session to the request context
+ *  - NOTE: this isn't the context parameter passed into APIs
+ *      - this is the request context passed from Next.js to api handler
+ * 
+ * @param {*} authOptions 
+ */
 module.exports = function* sessionLoader(authOptions) {
 	const state = new State();
 	const conf = new State();
