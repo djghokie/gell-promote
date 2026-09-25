@@ -5,7 +5,8 @@ const format = require('gell/state/format');
 const ErrorState = require('../../gell/error');
 
 const MESSAGE_REQUIRED_PARAMETER = 'call to event trigger (route="%s") does not provide required argument (name="%s")';
-const MESSAGE_PARAMETER_MAXLENGTH = 'call to event trigger (route="%s") has arugment (name="%s") that exceeds maximum allowed length';
+const MESSAGE_PARAMETER_MAXLENGTH = 'call to event trigger (route="%s") has argument (name="%s") that exceeds maximum allowed length';
+const MESSAGE_PARAMETER_TYPE = 'call to event trigger (route="%s") has argument (name="%s") that is not of type (type="%s")';
 
 /**
  * gell-dispatch middleware that validates event invocation parameters against the event metadata
@@ -38,8 +39,20 @@ module.exports = function(event, resume) {
             e.throw();
         }
 
+        // NOTE: omitted optional parameters are not type checked
+        if (val === undefined) return;
+
         if (param.type === 'string') {
-            if (!_.isString(val)) throw new Error();
+            if (!_.isString(val)) {
+                const e = new ErrorState();
+                e.set('name', 'ParameterValidationError');
+                e.set('route', __invocationSpec.route);
+                e.set('parameter', n);
+                e.set('type', param.type);
+                e.set('message', format(MESSAGE_PARAMETER_TYPE, 'route', 'parameter', 'type'));
+
+                e.throw();
+            }
 
             if (param.maxLength) {
                 if (val.length > param.maxLength) {
