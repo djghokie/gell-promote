@@ -45,7 +45,10 @@ module.exports = function* tenantLoader(tenantKey) {
 
         const { session, deps } = context;
 
-        const userId = session.snapshotAttribute();
+        // NOTE: anonymous requests have no tenant; authorization (e.g. gell-dispatch roles middleware) rejects them
+        if (!session) return;
+
+        const userId = session.snapshotAttribute('userId');
         const { store } = deps.resolve('store');
 
         const tenant$ = await store.lookup(tenantKey);

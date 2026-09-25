@@ -158,6 +158,17 @@ describe('event bus', function() {
             assert.strictEqual(event.deps, this.deps);
             assert.strictEqual(event.caller, caller);
         })
+
+        it('provides invocation spec without metadata', async function() {
+            const event = await $bus.next({ route: 'nometadata#action', invoke: false }).value;
+
+            assert.deepStrictEqual(event.__invocationSpec, {
+                route: 'nometadata#action',
+                eventName: 'nometadata',
+                triggerName: 'action',
+                triggerSpec: {}
+            });
+        })
     })
 
     describe('minimal metadata', function() {
