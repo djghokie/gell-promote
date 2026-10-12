@@ -11,6 +11,9 @@ const TYPE = "GELL#REGISTRY";
 
 class Registry extends State {
 
+    // __types is temporary way to expose the type modules
+    __types = {}
+
     // __events is temporary way to expose the event modules
     __events = {}
 
@@ -24,6 +27,8 @@ class Registry extends State {
         assert(name, `type ${TYPE} model must define "name" attribute to be registered`);
 
         this.set(name, type.materialize(model));
+
+        this.__types[name] = module;
     }
 
     registerEvent(module) {
