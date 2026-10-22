@@ -4,8 +4,14 @@ const javascript = require('gell-domain/binding/javascript');
 const model = {
     extends: [session.model],
     attributes: {
-        name: 'string',
-        namespaceId: 'string'
+        name: {
+            type: 'string',
+            editable: true
+        },
+        namespaceId: {
+            type: 'string',
+            editable: true
+        }
     },
     // WIP: don't think projections are being modeled for use currently (Oct 2026)
     projections: {

@@ -100,6 +100,38 @@ function createInitiate(__metadata={}, type, options) {
 }
 
 /**
+ * Finds an attribute definition on a model or any model it extends (own attributes win)
+ *
+ * WIP: walks the extends chain instead of "compiling" the model with gell-domain
+ *  - only object attribute specs are supported (array specs are skipped)
+ */
+function findAttribute(model, attribute) {
+    if (!model) return;
+
+    const { attributes } = model;
+
+    if (attributes && !Array.isArray(attributes) && attributes[attribute]) return attributes[attribute];
+
+    const bases = Array.isArray(model.extends) ? model.extends : [model.extends];
+
+    for (const base of bases) {
+        const def = findAttribute(base, attribute);
+
+        if (def) return def;
+    }
+}
+
+/**
+ * Resolves the stored type name: namespaced through the "types" registry when one is defined and has the
+ * type registered, otherwise the bare TYPE
+ */
+function typeName(type, deps) {
+    const types = deps.resolveSingle({ name: 'types', optional: true });
+
+    return types && types.get(type.TYPE) ? types.name(type.TYPE) : type.TYPE;
+}
+
+/**
  * WIP: idea here is that we have a standard approach to basic session update event
  *  - trying to cut down on boilerplate code
  *  - based on a type (domain)
@@ -126,8 +158,7 @@ function createUpdate(__metadata={}, type) {
     const { name } = __metadata;
 
     /**
-     * WIP: handle inherited attributes
-     *  - would need to "compile" the model using gell-domain
+     * NOTE: updates a single attribute per call
      * 
      * @param {*} session_ 
      * @param {*} attribute 
@@ -137,7 +168,7 @@ function createUpdate(__metadata={}, type) {
      * @returns 
      */
     async function doUpdate(session_, attribute, value, $txn, deps) {
-        const def = type.model.attributes[attribute];
+        const def = findAttribute(type.model, attribute);
         assert(def, `no attribute (name=${attribute}) defined by model`);
 
         const { editable } = def;
@@ -174,7 +205,7 @@ function createUpdate(__metadata={}, type) {
         const session_ = await lookup.effect({
             params: {
                 key: {
-                    type: type.TYPE,
+                    type: typeName(type, deps),
                     id
                 },
                 failIfNotFound: true

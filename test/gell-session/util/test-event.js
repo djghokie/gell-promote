@@ -13,8 +13,19 @@ const { createInitiate, createUpdate } = require('../../../gell-session/util/eve
 
 const TYPE = "TEST";
 
-const model = {
+const base = {
     extends: [session.model],
+    attributes: {
+        label: {
+            type: 'string',
+            editable: true
+        },
+        code: 'string'
+    }
+}
+
+const model = {
+    extends: [base],
     parent: Object.assign({}, session, { TYPE: 'TEST#PARENT' }),
     attributes: {
         type: {
@@ -197,7 +208,42 @@ describe('event generation utility', function() {
                 return assert.rejects(z => this.update('message', 'gello!'));
             })
 
-            it('inherited attribute');
+            it('inherited attribute', async function() {
+                const updated_ = await this.update('label', 'world!');
+
+                assert.strictEqual(updated_.snapshot().label, 'world!');
+            })
+
+            it('inherited uneditable attribute', function() {
+                return assert.rejects(z => this.update('code', '123'), /not editable/);
+            })
+
+            it('namespaced type', async function() {
+                const { Types } = require('../../../gell-discover/domain/types');
+
+                const types_ = new Types();
+                types_.register(type.TYPE, type.model, 'NS');
+                types_.set('NS', 'SPACE');
+
+                this.deps.define('types', types_);
+
+                const namespaced_ = type.materialize({ id: '456', title: 'gello' });
+                namespaced_.set('type', `SPACE::${type.TYPE}`);
+                await store.save(namespaced_);
+
+                const $txn = store.write();
+
+                const updated_ = await update.action({
+                    params: { id: '456', attribute: 'title', value: 'world!' },
+                    context: { $txn },
+                    deps: this.deps
+                });
+
+                await $txn.return().value;
+
+                assert.strictEqual(updated_.snapshot().title, 'world!');
+                assert.strictEqual((await store.lookup({ type: `SPACE::${type.TYPE}`, id: '456' })).title, 'world!');
+            })
         })
 
         describe('effect', function() {
