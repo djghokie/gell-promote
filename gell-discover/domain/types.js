@@ -11,8 +11,6 @@ class Types extends State {
 
     delimeter = DEFAULT_DELIMETER;
 
-    defs = {};
-    
     namespacedTypes = {};
 
     /**
@@ -39,8 +37,6 @@ class Types extends State {
         assert(_.isString(name));
         assert(_.isObject(model));
 
-        this.defs[name] = model;
-
         // this.set(name, type.materialize(model));
         this.set(name, model);
 
@@ -55,14 +51,13 @@ class Types extends State {
      * WIP: this should probably be pushed up to a Directory implementation
      */
     names() {
-		// return this._internal.keys();
-        return Object.keys(this.defs);
+		return this._internal.keys();
     }
 
     name(n) {
         assert(_.isString(n), 'name argument must be string');
 
-        // assert(this.get(n), `type (name=${n}) is not defined`);
+        assert(this.get(n), `type (name=${n}) is not defined`);
 
         const namespace = this.namespacedTypes[n];
 
@@ -97,7 +92,7 @@ class Types extends State {
     instance(name, state$) {
         assert(_.isString(name), 'name argument must be string');
 
-        const model = this.defs[name];
+        const model = this.get(name);
         assert(model, `no type (name=${name}) defined`);
 
         const instance_ = javascript.materialize(state$, model);
@@ -114,14 +109,17 @@ class Types extends State {
      *  - should namespaces be passed in here?
      *      - maybe as a map?
      * 
+     * WIP: not sure this is the most efficient approach
+     *  - really what we are trying to do is allow for Types to be namespaced on a per call basis
+     *  - registered types stay the same
+     *  - namespaces don't carry over between calls to clone
+     *      - probably easier to do if namespaces were't stored as state attributes
+     * 
      * @returns cloned types registry
      */
     clone() {
-        const namespacedTypes = new Types();
-        namespacedTypes.defs = this.defs;
-        namespacedTypes.namespacedTypes = this.namespacedTypes;
-
-        return namespacedTypes;
+        // NOTE: if we just use _.clone, copies shared the same internal state Maps
+        return _.cloneDeep(this);
     }
 
 }

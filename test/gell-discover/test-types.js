@@ -35,7 +35,7 @@ describe('types registy', function() {
         })
     
         it('no definitions', function() {
-            const names = types.names();
+            const names = Array.from(types.names());
 
             assert.strictEqual(names.length, 0);
         })
@@ -47,9 +47,10 @@ describe('types registy', function() {
         it('single definition', function() {
             types.register(type.TYPE, type.model);
 
-            const names = types.names();
+            const names = Array.from(types.names());
 
             assert.strictEqual(names.length, 1);
+            assert.strictEqual(names[0], 'UNITTEST#TYPE');
         })
 
         /**
@@ -60,7 +61,7 @@ describe('types registy', function() {
             types.register(type.TYPE, type.model);
             types.register("GELLO", session.model);
 
-            const names = types.names();
+            const names = Array.from(types.names());
 
             assert.strictEqual(names.length, 2);
         })
