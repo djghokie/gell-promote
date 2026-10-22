@@ -38,6 +38,9 @@ module.exports = function(event, resume) {
             e.throw();
         }
 
+        // an omitted optional parameter has nothing to type-check
+        if (val === undefined) return;
+
         if (param.type === 'string') {
             if (!_.isString(val)) throw new Error();
 
