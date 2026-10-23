@@ -1,13 +1,13 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const user = require('gell-web/domain/user');
+const userLookup = require('../user/snapshot/user');
 
 /**
  * WIP: new approach
  *  - type would be specific to the app
  *      - PEAKSHUTTLE#APP#OPERATIONS
- *  - id would be the identity id (email)
+ *  - USER is a child of the IDENTITY (parentId); id is generated (see web.user.lookup)
  */
 exports.__metadata = {
     name: 'user.authorize',
@@ -18,21 +18,27 @@ exports.__metadata = {
 }
 
 exports.effect = async function({ params={}, context={}, deps }) {
-    const { logger, store } = deps.resolve('logger', 'store');
+    const { logger } = deps.resolve('logger');
 
     logger.info('executing effect (name="user.authorize")');
 
     const { applicationType } = params;
     assert(applicationType);
-    
+
     const { identity_ } = context;
     assert(identity_);
 
-    const { id } = identity_.snapshot();
+    const user_ = await userLookup.effect({
+        params: {
+            applicationId: applicationType
+        },
+        context: {
+            identity_
+        },
+        deps
+    });
 
-    const user$ = await store.lookup({ type: applicationType, id });
+    assert(user_);
 
-    assert(user$);
-
-    return user.materialize(user$);
+    return user_;
 }

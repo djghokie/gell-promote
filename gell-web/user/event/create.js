@@ -28,9 +28,10 @@ exports.__metadata = {
  * @returns 
  */
 async function doCreate(applicationType, identity_, $txn, deps) {
+    // NOTE: USER is a child of the IDENTITY (see web.user.lookup); id is generated
     const user_ = user.materialize({
         type: applicationType,
-        id: identity_.snapshotAttribute('id'),
+        parentId: identity_.snapshotAttribute('id'),
         status: 'AUTHORIZED',
         activeTs: Date.now()
     });

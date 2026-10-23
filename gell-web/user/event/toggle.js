@@ -3,6 +3,7 @@ const _ = require('lodash');
 
 const update = require('gell-session/event/update');
 
+const identity = require('../../identity/snapshot/identity');
 const user = require('../snapshot/user');
 
 exports.__metadata = {
@@ -61,13 +62,25 @@ exports.action = async function({ params={}, context={}, deps }) {
 
     const { identityId, applicationId, role } = params;
 
-    const user_ = await user.effect({
+    const identity_ = await identity.effect({
         params: {
-            identityId,
-            applicationId
+            id: identityId
         },
         deps
     });
+
+    const user_ = await user.effect({
+        params: {
+            applicationId
+        },
+        context: {
+            identity_
+        },
+        deps
+    });
+
+    // NOTE: roles can only be toggled for an existing USER (see web.user.create)
+    assert(user_, `no user (identityId=${identityId}; applicationId=${applicationId})`);
 
     return doToggle(user_, role, context.$txn, deps);
 }
