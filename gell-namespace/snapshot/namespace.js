@@ -1,4 +1,5 @@
 const assert = require('assert');
+const _ = require('lodash');
 
 const lookup = require('gell-session/snapshot/lookup');
 
@@ -16,6 +17,9 @@ exports.__metadata = {
 }
 
 async function doLookup(type, id, deps) {
+    assert(_.isString(type), 'namespace type must be a string');
+    assert(_.isString(id), 'namespace id must be a string');
+
     const { types } = deps.resolve('types');
 
     const name = types.name(type);
