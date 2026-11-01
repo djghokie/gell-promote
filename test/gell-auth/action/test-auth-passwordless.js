@@ -7,6 +7,7 @@ const bootstrap = require('../bootstrap');
 
 const user = require('gell-web/domain/user');
 
+// const createUser = require('../../../gell-web/user/action/create');
 const auth = require('../../../gell-auth/action/auth-passwordless');
 
 describe('passwordless auth action', function() {
@@ -20,7 +21,7 @@ describe('passwordless auth action', function() {
         store = this.deps.resolveSingle('store');
 
         application = {
-            namespaceId: 'UNITTEST:WEB'
+            id: 'UNITTEST:WEB'
         }
     })
 
@@ -33,10 +34,10 @@ describe('passwordless auth action', function() {
         this.createUser = async function(userId, application={}) {
             assert(userId);
 
-            const { namespaceId } = application;
+            const { id } = application;
 
-            if (namespaceId)
-                var type = `${namespaceId}::${user.TYPE}`;
+            if (id)
+                var type = `${id}::${user.TYPE}`;
 
             const user_ = user.materialize({
                 type,

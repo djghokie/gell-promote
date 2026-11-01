@@ -5,8 +5,6 @@ const runtime = require('gell-runtime/mocha');
 
 const bootstrap = require('../bootstrap');
 
-const user = require('gell-web/domain/user');
-
 const auth = require('../../../gell-auth/action/auth-newuser');
 
 describe('newuser auth action', function() {
@@ -20,7 +18,7 @@ describe('newuser auth action', function() {
         store = this.deps.resolveSingle('store');
 
         application = {
-            namespaceId: 'UNITTEST:WEB'
+            id: 'UNITTEST:WEB'
         }
     })
 

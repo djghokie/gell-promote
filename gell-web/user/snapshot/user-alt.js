@@ -27,7 +27,7 @@ async function lookupById(id, application, deps) {
     const { logger, store } = deps.resolve('logger', 'store');
 
     if (application) {
-        const { namespaceId } = application;
+        const { id: namespaceId } = application;
 
         var type = `${namespaceId}::${user.TYPE}`;
     }
@@ -35,7 +35,7 @@ async function lookupById(id, application, deps) {
 
     logger.info(`looking up user (id=${id}; type=${type})`);
 
-    const user$ = store.lookup({ type, id });
+    const user$ = await store.lookup({ type, id });
 
     if (user$) return user.materialize(user$);
     else
@@ -46,7 +46,7 @@ async function lookupByUserId(userId, application, deps) {
     const { logger, store } = deps.resolve('logger', 'store');
 
     if (application) {
-        const { namespaceId } = application;
+        const { id: namespaceId } = application;
 
         var type = `${namespaceId}::${user.TYPE}`;
     }
@@ -71,15 +71,28 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     if (id) return lookupById(id, application, deps);
     
-    if (userId)return lookupByUserId(userId, application, deps);
+    if (userId) return lookupByUserId(userId, application, deps);
 
     throw new Error('either id or userId is required');
 }
 
-exports.api = async function({ params={}, deps }) {
+exports.api = async function({ params={}, context={}, deps }) {
     const { logger } = deps.resolve('logger');
 
     logger.info('executing api (name="web.user.lookup.alt")');
     
-    throw new Error('NYI');
+    const { id, userId } = params;
+    const { application } = context;
+
+    if (id) {
+        var user_ = await lookupById(id, application, deps);
+        if (!user_) throw Object.assign(new Error(`user not found (id=${id})`), { status: 404 });
+    }
+    else if (userId) {
+        var user_ = await lookupByUserId(userId, application, deps);
+        if (!user_) throw Object.assign(new Error(`user not found (userId=${userId})`), { status: 404 });
+    }
+    else throw new Error('either id or userId is required');
+
+    return user_.snapshot();
 }

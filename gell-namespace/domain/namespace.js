@@ -8,14 +8,18 @@ const model = {
             type: 'string',
             editable: true
         },
-        namespaceId: {
+        description: {
+            type: 'string',
+            editable: true
+        },
+        notes: {
             type: 'string',
             editable: true
         }
     },
     // WIP: don't think projections are being modeled for use currently (Oct 2026)
     projections: {
-        association: ['id', 'label']
+        association: ['id', 'name']
     }
 }
 
