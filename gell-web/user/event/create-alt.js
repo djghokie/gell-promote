@@ -5,6 +5,9 @@ const activate = require('gell-session/event/activate');
 
 const user = require('gell-web/domain/user');
 
+const applicationLookup = require('../../../gell-namespace/snapshot/namespace');
+const application = require('../../../gell-namespace/domain/application');
+
 const userLookup = require('../snapshot/user-alt');
 
 /**
@@ -34,6 +37,46 @@ exports.__metadata = {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Determines which application to associate with the user to be created
+ *  - applicationId is checked first
+ * 
+ * WIP: unclear if support is needed for application passed through context (middlewware populated)
+ * 
+ * @param {*} applicationId 
+ * @param {*} caller 
+ * @param {*} deps 
+ */
+async function resolveApplication(applicationId, caller, context, deps) {
+    const { logger } = deps.resolve('logger');
+
+    if (applicationId) {
+        return applicationLookup.effect({
+            params: {
+                type: application.TYPE,
+                id: applicationId
+            },
+            deps
+        });
+    }
+
+    const parentId = caller.snapshotAttribute('parentId');
+
+    if (parentId) {
+        return applicationLookup.effect({
+            params: {
+                type: application.TYPE,
+                id: parentId
+            },
+            deps
+        });
+    }
+
+    if (context.application) return context.application;
+
+    logger.warn('no application associated with request; user will be created in default namespace');
+}
+
 async function lookupUser(userId, application, deps) {
     const user_ = await userLookup.effect({
         params: {
@@ -58,7 +101,8 @@ async function doCreate(email, role, application, $txn, deps) {
     assert(_.isString(role), 'role is required');
 
     if (application) {
-        var type = `${application.id}::${user.TYPE}`;
+        var applicationId = application.id; 
+        var type = `${applicationId}::${user.TYPE}`;
     } else {
         var type = user.TYPE;
 
@@ -75,6 +119,7 @@ async function doCreate(email, role, application, $txn, deps) {
         email: normalizedEmail,
         roles: [role],
         status: 'AUTHORIZED',
+        parentId: applicationId
     });
 
     await activate.effect({
@@ -100,13 +145,24 @@ exports.effect = async function({ params={}, context={}, deps }) {
     return doCreate(email, role, application, $txn, deps);
 }
 
-exports.action = async function({ params={}, context={}, deps }) {
+/**
+ * WIP: how to associate application with user correctlu
+ *  - how application gets specified
+ *      - context populated with application via middleware
+ *      - application associated with caller
+ *      - applicationId passed in as parameter
+ * 
+ * WIP: should this guard against creating user's outside of ecosystem?
+ */
+exports.action = async function({ params={}, context={}, caller, deps }) {
     const { logger } = deps.resolve('logger');
 
     logger.info('executing action (name="web.user.create.alt")');
 
-    const { email, role } = params;
-    const { application, $txn } = context;
+    const { email, role, applicationId } = params;
+    const { $txn } = context;
+
+    const application = await resolveApplication(applicationId, caller, context, deps);
 
     return doCreate(email, role, application, $txn, deps);
 }
