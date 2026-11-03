@@ -23,12 +23,13 @@ class Registry extends State {
     registerType(module) {
         const { TYPE, model } = module;
         const { name } = model;
-        assert(TYPE, `type must export "TYPE" attribute to be registered`);
-        assert(name, `type ${TYPE} model must define "name" attribute to be registered`);
 
-        this.set(name, type.materialize(model));
-
-        this.__types[name] = module;
+        // NOTE: TYPE and name must be exposed to be registered
+        if (TYPE && name) {
+            this.set(name, type.materialize(model));
+    
+            this.__types[name] = module;
+        }
     }
 
     registerEvent(module) {
