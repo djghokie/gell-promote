@@ -4,6 +4,19 @@ const javascript = require('gell-domain/binding/javascript');
 const model = {
     extends: [session.model],
     attributes: {
+        id: {
+            type: 'string',
+            default: function() {
+                const { parentId, relativeId } = this.snapshotPartial(['parentId', 'relativeId']);
+
+                if (relativeId)
+                    return parentId ? `${parentId}:${relativeId}` : relativeId;
+            }
+        },
+        relativeId: {
+            type: 'string',
+            description: 'id under the parent namespace'
+        },
         name: {
             type: 'string',
             editable: true

@@ -21,7 +21,9 @@ describe('namespace create action', function() {
     })
 
     beforeEach(function() {
-        parent_ = ecosystem.materialize();
+        parent_ = ecosystem.materialize({
+            id: 'TEST'
+        });
     })
 
     describe('effect', function() {
@@ -32,6 +34,9 @@ describe('namespace create action', function() {
             const $txn = store.write();
 
             await create.effect({
+                params: {
+                    relativeId: 'MYAPP'
+                },
                 context: {
                     type: application.TYPE,
                     parent_,
@@ -47,6 +52,7 @@ describe('namespace create action', function() {
             const [application$] = store.select({ type: application.TYPE });
 
             assert.strictEqual(application$.type, 'NAMESPACE#APPLICATION');
+            assert.strictEqual(application$.id, 'TEST:MYAPP');
         })
     })
 

@@ -61,6 +61,9 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     logger.info('executing effect (name="namespace.create")');
 
+    // NOTE: this is required, otherwise id will be undefined
+    assert(_.isString(params.relativeId), 'relativeId (relative namespace) is required');
+
     // console.debug('#####', context);
     // console.debug('#####', params);
 

@@ -18,7 +18,7 @@ describe('namespace lookup snapshot', function() {
     beforeEach(async function() {
         const { types, store } = this.deps.resolve('types', 'store');
 
-        tenant_ = types.instance(tenant.TYPE);
+        tenant_ = types.instance(tenant.TYPE, { relativeId: 'BLUEHOUR' });
 
         await store.save(tenant_);
     })
