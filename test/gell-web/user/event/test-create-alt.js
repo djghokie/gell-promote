@@ -15,12 +15,7 @@ describe('create user (alt)', function() {
     before(runtime.beforeAll);
     beforeEach(bootstrap.beforeEach);
 
-    let store;
-    let parent_;
-
-    beforeEach(function() {
-        store = this.deps.resolveSingle('store');
-    })
+    let store, app, caller;
 
     beforeEach(function() {
         this.createApplication = async function(id) {
@@ -42,24 +37,39 @@ describe('create user (alt)', function() {
         }
     })
 
+    beforeEach(async function() {
+        store = this.deps.resolveSingle('store');
+
+        app = await this.createApplication('ADMIN');
+
+        caller = browser.materialize({
+            parentId: app.id,
+        });
+        caller.set('namespaceId', 'UNITTEST:BLUEHOUR');
+    })
+
     describe('action', function() {
-        let app;
-
-        beforeEach(async function() {
-            app = await this.createApplication('ADMIN');
-        })
-
         describe('application parameter', function() {
             beforeEach(function() {
                 this.createUser = async function(email, role, applicationId) {
-                    return user.action({
+                    const $txn = store.write();
+
+                    const user_ = await user.action({
+                        caller,
                         params: {
                             email,
                             role,
                             applicationId
                         },
+                        context: {
+                            $txn
+                        },
                         deps: this.deps
                     })
+
+                    await $txn.return().value;
+
+                    return user_;
                 }
             })
 
@@ -72,11 +82,17 @@ describe('create user (alt)', function() {
             it('fails if application does not exist', function() {
                 return assert.rejects(z => this.createUser('user@test.com', 'admin', 'WEB'));
             })
+
+            it('saves user correctly', async function() {
+                const user_ = await this.createUser('user@test.com', 'admin', 'ADMIN');
+
+                const [user$] = store.select({ id: user_.id });
+
+                assert.strictEqual(user$.namespaceId, 'UNITTEST:BLUEHOUR');
+            })
         })
 
         describe('caller', function() {
-            let caller;
-
             beforeEach(function() {
                 this.createUser = async function(email, role) {
                     return user.action({
@@ -90,12 +106,6 @@ describe('create user (alt)', function() {
                 }
             })
 
-            beforeEach(function() {
-                caller = browser.materialize({
-                    parentId: app.id
-                });
-            })
-
             it('returns created user', async function() {
                 const user_ = await this.createUser('user@test.com', 'admin', 'ADMIN');
 
@@ -105,9 +115,13 @@ describe('create user (alt)', function() {
             })
         })
 
-        // WIP: see note in action
+        // 
+        /**
+         * WIP: see note in action
+         *  - this test doesn't really make any sense because caller should always have a parentId
+         */
         describe('context', function() {
-            let caller, ops;
+            let ops;
 
             beforeEach(function() {
                 this.createUser = async function(email, role) {
@@ -126,9 +140,9 @@ describe('create user (alt)', function() {
             })
 
             beforeEach(function() {
-                caller = browser.materialize();
-
                 ops = this.createApplication('OPS');
+
+                caller.remove('parentId');
             })
 
             it('returns created user', async function() {

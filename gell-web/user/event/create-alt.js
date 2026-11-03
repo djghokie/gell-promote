@@ -91,7 +91,7 @@ async function lookupUser(userId, application, deps) {
     if (user_) throw new Error(`user (userId=${userId}) already exists`);
 }
 
-async function doCreate(email, role, application, $txn, deps) {
+async function doCreate(email, role, application, namespaceId, $txn, deps) {
     const { logger } = deps.resolve('logger');
 
     assert(_.isString(email), 'email parameter must be a string');
@@ -119,8 +119,10 @@ async function doCreate(email, role, application, $txn, deps) {
         email: normalizedEmail,
         roles: [role],
         status: 'AUTHORIZED',
-        parentId: applicationId
+        parentId: applicationId,
+        // namspaceId
     });
+    user_.set('namespaceId', namespaceId);
 
     await activate.effect({
         context: {
@@ -142,16 +144,10 @@ exports.effect = async function({ params={}, context={}, deps }) {
     const { email, role } = params;
     const { application, $txn } = context;
 
-    return doCreate(email, role, application, $txn, deps);
+    return doCreate(email, role, application, undefined, $txn, deps);
 }
 
 /**
- * WIP: how to associate application with user correctlu
- *  - how application gets specified
- *      - context populated with application via middleware
- *      - application associated with caller
- *      - applicationId passed in as parameter
- * 
  * WIP: should this guard against creating user's outside of ecosystem?
  */
 exports.action = async function({ params={}, context={}, caller, deps }) {
@@ -164,5 +160,7 @@ exports.action = async function({ params={}, context={}, caller, deps }) {
 
     const application = await resolveApplication(applicationId, caller, context, deps);
 
-    return doCreate(email, role, application, $txn, deps);
+    const namspaceId = caller.snapshotAttribute('namespaceId');
+
+    return doCreate(email, role, application, namspaceId, $txn, deps);
 }
