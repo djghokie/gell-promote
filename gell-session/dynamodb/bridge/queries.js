@@ -24,14 +24,17 @@ exports['sessions.bridged'] = {
     query: ({ targetId, type }) => {
         const filters = [];
 
-        return {
+        const q = {
             table: 'dynamodb.table.session',
             hash: targetId,
-            eq: type,
             options: {
                 index: 'bridge',
                 filters,
             }
         }
+
+        if (type) q.options.eq = type;
+
+        return q;
     }
 };
