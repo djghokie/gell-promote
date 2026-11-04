@@ -46,6 +46,9 @@ describe('newuser auth action', function() {
     
                 const user$ = await auth.effect({
                     params: credentials,
+                    context: {
+                        application
+                    },
                     deps: this.deps
                 });
     

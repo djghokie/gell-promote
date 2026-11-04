@@ -22,6 +22,16 @@ exports.__metadata = {
     }
 }
 
+/**
+ * WIP: this credential provider can't be currently used because users must be associated with a tenant
+ *  - could change the signin UI to allow selection of tenant
+ * 
+ * @param {*} userId 
+ * @param {*} role 
+ * @param {*} application 
+ * @param {*} deps 
+ * @returns 
+ */
 async function createUser(userId, role, application={}, deps) {
     const { logger, store } = deps.resolve('logger', 'store');
 

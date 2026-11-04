@@ -5,9 +5,7 @@ const runtime = require('gell-runtime/mocha');
 
 const bootstrap = require('../bootstrap');
 
-const user = require('gell-web/domain/user');
-
-// const createUser = require('../../../gell-web/user/action/create');
+const createUser = require('../../../gell-web/user/event/create-alt');
 const auth = require('../../../gell-auth/action/auth-passwordless');
 
 describe('passwordless auth action', function() {
@@ -32,19 +30,16 @@ describe('passwordless auth action', function() {
          *      - support namespaces
          */
         this.createUser = async function(userId, application={}) {
-            assert(userId);
-
-            const { id } = application;
-
-            if (id)
-                var type = `${id}::${user.TYPE}`;
-
-            const user_ = user.materialize({
-                type,
-
-                userId,
-                email: userId
-            })
+            const user_ = await createUser.effect({
+                params: {
+                    email: userId,
+                    role: 'viewer'
+                },
+                context: {
+                    application
+                },
+                deps: this.deps
+            });
 
             await store.save(user_);
 
@@ -69,8 +64,8 @@ describe('passwordless auth action', function() {
             it('returns user if successful', async function() {
                 const userId = 'user@test.com';
     
-                const existing_ = await this.createUser(userId);
-    
+                const existing_ = await this.createUser(userId, application);
+
                 credentials = {
                     userId
                 };
@@ -79,6 +74,9 @@ describe('passwordless auth action', function() {
     
                 const user$ = await auth.effect({
                     params: credentials,
+                    context: {
+                        application
+                    },
                     deps: this.deps
                 });
     

@@ -11,7 +11,7 @@ import auth from '../action/auth-passwordless';
  *  - used in non-production scenarios to sign in as an existing user
  *  - could potentially pass in id and/or name as arguments
  */
-export default function passwordlessProvider(namespaceId, deps) {
+export default function passwordlessProvider(application, deps) {
     assert(deps, 'deps is required');
 
     return CredentialsProvider({
@@ -32,10 +32,6 @@ export default function passwordlessProvider(namespaceId, deps) {
         },
 
         async authorize(credentials) {
-            const application = {
-                namespaceId
-            }
-
             return auth.effect({
                 params: credentials,
                 context: {

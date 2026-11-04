@@ -6,6 +6,8 @@ const webQueries = require('../../gell-web/dynamodb/queries');
 const MockStore = require('gell-aws-dynamodb/mock/store');
 const queryWrapper = require('gell-aws-dynamodb/query-wrapper');
 
+const user = require('gell-web/domain/user');
+
 const { Types } = require('../../gell-discover/domain/types');
 
 const tenant = require('../../gell-namespace/domain/tenant');
@@ -15,6 +17,7 @@ function setupTypes(deps) {
     const types = new Types();
     types.register(tenant.TYPE, tenant.model);
     types.register(application.TYPE, application.model);
+    types.register(user.TYPE, user.model);
 
     deps.define("types", types);
 }
