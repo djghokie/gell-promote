@@ -12,19 +12,20 @@ exports['web.user.userId'] = {
         type: {
             type: 'string',
             optional: true
-        }
-        // applicationId: 'string',
-        // email: 'string'
+        },
+        applicationId: 'string',
     },
 
-    filter: (items, { userId, type=user.TYPE }) => items.filter(s$ => {
-        return s$.type === type && s$.userId === userId;
+    filter: (items, { userId, type=user.TYPE, applicationId }) => items.filter(s$ => {
+        return s$.type === type && s$.userId === userId && s$.parentId === applicationId;
     }),
 
-    query: ({ userId, parentId, type=user.TYPE }) => ({
+    query: ({ userId, applicationId, type=user.TYPE }) => ({
         table: 'dynamodb.table.session',
         hash: type,
         options: {
+            index: 'children',
+            eq: applicationId,
             filters: [
                 { attr: 'userId', eq: userId },
             ]

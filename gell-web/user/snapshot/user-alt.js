@@ -23,15 +23,11 @@ exports.__metadata = {
     }
 }
 
-async function lookupById(id, application, deps) {
+async function lookupById(id, deps) {
     const { logger, store } = deps.resolve('logger', 'store');
+    const types = deps.resolveSingle({ name: 'types', optional: true });
 
-    if (application) {
-        const { id: namespaceId } = application;
-
-        var type = `${namespaceId}::${user.TYPE}`;
-    }
-    else var type = user.TYPE;
+    const type = types ? types.name(user.TYPE) : user.TYPE;
 
     logger.info(`looking up user (id=${id}; type=${type})`);
 
@@ -44,17 +40,15 @@ async function lookupById(id, application, deps) {
 
 async function lookupByUserId(userId, application, deps) {
     const { logger, store } = deps.resolve('logger', 'store');
+    const types = deps.resolveSingle({ name: 'types', optional: true });
 
-    if (application) {
-        const { id: namespaceId } = application;
+    const type = types ? types.name(user.TYPE) : user.TYPE;
 
-        var type = `${namespaceId}::${user.TYPE}`;
-    }
-    else var type = user.TYPE;
+    const applicationId = application.id;
 
     logger.info(`looking up user (userId=${userId}; type=${type})`);
 
-    const [user$] = await store.drain('web.user.userId', { type, userId });
+    const [user$] = await store.drain('web.user.userId', { type, userId, applicationId });
 
     if (user$) return user.materialize(user$);
     else
@@ -67,11 +61,10 @@ exports.effect = async function({ params={}, context={}, deps }) {
     logger.info('executing effect (name="web.user.lookup.alt")');
 
     const { id, userId } = params;
-    const { application } = context;
 
-    if (id) return lookupById(id, application, deps);
+    if (id) return lookupById(id, deps);
     
-    if (userId) return lookupByUserId(userId, application, deps);
+    if (userId) return lookupByUserId(userId, context.application, deps);
 
     throw new Error('either id or userId is required');
 }
@@ -82,14 +75,13 @@ exports.api = async function({ params={}, context={}, deps }) {
     logger.info('executing api (name="web.user.lookup.alt")');
     
     const { id, userId } = params;
-    const { application } = context;
 
     if (id) {
-        var user_ = await lookupById(id, application, deps);
+        var user_ = await lookupById(id, deps);
         if (!user_) throw Object.assign(new Error(`user not found (id=${id})`), { status: 404 });
     }
     else if (userId) {
-        var user_ = await lookupByUserId(userId, application, deps);
+        var user_ = await lookupByUserId(userId, deps);
         if (!user_) throw Object.assign(new Error(`user not found (userId=${userId})`), { status: 404 });
     }
     else throw new Error('either id or userId is required');

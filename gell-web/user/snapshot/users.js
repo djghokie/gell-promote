@@ -10,7 +10,11 @@ exports.__metadata = {
     name: 'web.users',
     description: 'returns all USERs associated with an application',
     triggers: {
-        effect: {},
+        effect: {
+            context: {
+                application_: 'state'
+            }
+        },
         api: {
             params: {
                 applicationId: {
@@ -23,13 +27,18 @@ exports.__metadata = {
 }
 
 async function doFetch(application_, deps) {
-    const { logger, store } = deps.resolve('logger', 'store');
+    const { logger, store, types } = deps.resolve('logger', 'store', 'types');
 
+    const userType = types.name(user.TYPE);
     const parentId = application_.id;
+
+    logger.info(`fetching users (type=${userType}; parentId=${parentId})`);
+
+// console.debug('#####', store.snapshot());
 
     // console.debug('#####', parentId);
 
-    return store.drain('session.children', { parentId });
+    return store.drain('session.children', { type: userType, parentId });
 }
 
 exports.effect = async function({ params={}, context={}, deps }) {
@@ -37,7 +46,10 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     logger.info('executing effect (name="web.users")');
 
-    throw new Error('NYI');
+    const { application_ } = context;
+    assert(application_, 'application_ is required');
+
+    return doFetch(application_, deps);
 }
 
 exports.api = async function({ caller, params={}, deps }) {

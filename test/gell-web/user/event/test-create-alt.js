@@ -7,6 +7,7 @@ const bootstrap = require('../../bootstrap');
 
 const browser = require('gell-web/domain/browser');
 
+const ecosystem = require('../../../../gell-namespace/domain/ecosystem');
 const application = require('../../../../gell-namespace/domain/application');
 const createApplication = require('../../../../gell-namespace/action/create');
 const user = require('../../../../gell-web/user/event/create-alt');
@@ -19,21 +20,20 @@ describe('create user (alt)', function() {
 
     beforeEach(function() {
         this.createApplication = async function(id) {
-            /**
-             * WIP: fix namespace create action
-            app = await createApplication.effect({
-                parmas: {
-                    type: application.TYPE
+            const app_ = await createApplication.effect({
+                params: {
+                    relativeId: id
+                },
+                context: {
+                    type: application.TYPE,
+                    parent_: ecosystem.materialize({ id: 'UNITTEST' })
                 },
                 deps: this.deps
             });
-             */
 
-            const app = application.materialize({ id });
+            await store.save(app_);
 
-            await store.save(app);
-
-            return app;
+            return app_;
         }
     })
 
@@ -74,17 +74,17 @@ describe('create user (alt)', function() {
             })
 
             it('returns created user', async function() {
-                const user_ = await this.createUser('user@test.com', 'admin', 'ADMIN');
+                const user_ = await this.createUser('user@test.com', 'admin', 'UNITTEST:ADMIN');
 
                 assert(user_);
             })
         
             it('fails if application does not exist', function() {
-                return assert.rejects(z => this.createUser('user@test.com', 'admin', 'WEB'));
+                return assert.rejects(z => this.createUser('user@test.com', 'admin', 'UNITTEST:WEB'));
             })
 
             it('saves user correctly', async function() {
-                const user_ = await this.createUser('user@test.com', 'admin', 'ADMIN');
+                const user_ = await this.createUser('user@test.com', 'admin', 'UNITTEST:ADMIN');
 
                 const [user$] = store.select({ id: user_.id });
 
@@ -107,11 +107,24 @@ describe('create user (alt)', function() {
             })
 
             it('returns created user', async function() {
-                const user_ = await this.createUser('user@test.com', 'admin', 'ADMIN');
+                const user_ = await this.createUser('user@test.com', 'admin', 'UNITTEST:ADMIN');
 
                 const user$ = user_.snapshot();
 
-                assert.strictEqual(user$.type, 'ADMIN::WEB#USER');
+                assert.strictEqual(user$.type, 'WEB#USER');
+                assert.strictEqual(user$.parentId, 'UNITTEST:ADMIN');
+            })
+
+            it('without types', async function() {
+                // NOTE: no way to "unset" a dependency
+                delete this.deps._dependencies.types;
+
+                const user_ = await this.createUser('user@test.com', 'admin', 'UNITTEST:ADMIN');
+
+                const user$ = user_.snapshot();
+
+                assert.strictEqual(user$.type, 'WEB#USER');
+                assert.strictEqual(user$.parentId, 'UNITTEST:ADMIN');
             })
         })
 
@@ -146,11 +159,12 @@ describe('create user (alt)', function() {
             })
 
             it('returns created user', async function() {
-                const user_ = await this.createUser('user@test.com', 'admin', 'ADMIN');
+                const user_ = await this.createUser('user@test.com', 'admin', 'UNITTEST:ADMIN');
 
                 const user$ = user_.snapshot();
 
-                assert.strictEqual(user$.type, 'OPS::WEB#USER');
+                assert.strictEqual(user$.type, 'WEB#USER');
+                assert.strictEqual(user$.parentId, 'UNITTEST:OPS');
             })
         })
     })

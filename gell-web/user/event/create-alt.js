@@ -88,11 +88,14 @@ async function lookupUser(userId, application, deps) {
         deps
     })
 
-    if (user_) throw new Error(`user (userId=${userId}) already exists`);
+    if (user_) {
+        throw new Error(`user (userId=${userId}) already exists`);
+    }
 }
 
 async function doCreate(email, role, application, namespaceId, $txn, deps) {
     const { logger } = deps.resolve('logger');
+    const types = deps.resolveSingle({ name: 'types', optional: true });
 
     assert(_.isString(email), 'email parameter must be a string');
     const normalizedEmail = email.trim().toLowerCase();
@@ -100,14 +103,9 @@ async function doCreate(email, role, application, namespaceId, $txn, deps) {
 
     assert(_.isString(role), 'role is required');
 
-    if (application) {
-        var applicationId = application.id; 
-        var type = `${applicationId}::${user.TYPE}`;
-    } else {
-        var type = user.TYPE;
+    if (application) var applicationId = application.id; 
 
-        logger.warn(`user (email=${email}) will not be namespaced; system is single tenant`);
-    }
+    const type = types ? types.name(user.TYPE) : user.TYPE;
 
     await lookupUser(normalizedEmail, application, deps);
 

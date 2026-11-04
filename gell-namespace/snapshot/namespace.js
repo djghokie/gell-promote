@@ -20,9 +20,9 @@ async function doLookup(type, id, deps) {
     assert(_.isString(type), 'namespace type must be a string');
     assert(_.isString(id), 'namespace id must be a string');
 
-    const { types } = deps.resolve('types');
+    const types = deps.resolveSingle({ name: 'types', optional: true });
 
-    const name = types.name(type);
+    const name = types ? types.name(type) : type;
 
     return lookup.effect({
         params: {
