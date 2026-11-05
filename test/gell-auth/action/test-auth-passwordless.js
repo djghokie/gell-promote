@@ -36,7 +36,8 @@ describe('passwordless auth action', function() {
                     role: 'viewer'
                 },
                 context: {
-                    application
+                    application,
+                    namespaceId: 'UNITTEST'
                 },
                 deps: this.deps
             });
@@ -67,7 +68,8 @@ describe('passwordless auth action', function() {
                 const existing_ = await this.createUser(userId, application);
 
                 credentials = {
-                    userId
+                    userId,
+                    tenantId: existing_.snapshotAttribute('namespaceId')
                 };
     
                 // console.debug('#####', existing_);
@@ -94,7 +96,8 @@ describe('passwordless auth action', function() {
                 const existing_ = await this.createUser(userId, application);
     
                 credentials = {
-                    userId
+                    userId,
+                    tenantId: existing_.snapshotAttribute('namespaceId')
                 };
     
                 // console.debug('#####', existing_);

@@ -18,13 +18,14 @@ exports.__metadata = {
     }
 }
 
-async function lookupUser(userId, application, deps) {
+async function lookupUser(userId, application, namespaceId, deps) {
     return user.effect({
         params: {
             userId
         },
         context: {
-            application
+            application,
+            namespaceId
         },
         deps
     })
@@ -35,13 +36,14 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     logger.info('executing effect (name="web.user.auth.passwordless")');
 
-    const { userId } = params;
+    const { userId, tenantId } = params;
     const { application } = context;
 
     try {
         assert(_.isString(userId), 'userId string is required');
+        assert(_.isString(tenantId), 'namespaceId string is required');
     
-        const user_ = await lookupUser(userId, application, deps);
+        const user_ = await lookupUser(userId, application, tenantId, deps);
     
         if (user_) return user_.snapshot();
     } catch (e) {

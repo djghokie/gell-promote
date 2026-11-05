@@ -105,7 +105,7 @@ async function doCreate(email, role, application, namespaceId, $txn, deps) {
 
     if (application) var applicationId = application.id; 
 
-    const type = types ? types.name(user.TYPE) : user.TYPE;
+    const type = types ? types.name(user.TYPE, namespaceId) : user.TYPE;
 
     await lookupUser(normalizedEmail, application, deps);
 
@@ -140,9 +140,9 @@ exports.effect = async function({ params={}, context={}, deps }) {
     logger.info('executing effect (name="web.user.create.alt")');
 
     const { email, role } = params;
-    const { application, $txn } = context;
+    const { application, namespaceId, $txn } = context;
 
-    return doCreate(email, role, application, undefined, $txn, deps);
+    return doCreate(email, role, application, namespaceId, $txn, deps);
 }
 
 /**

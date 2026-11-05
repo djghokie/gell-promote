@@ -54,10 +54,19 @@ class Types extends State {
 		return this._internal.keys();
     }
 
-    name(n) {
+    /**
+     * Returns the type name referenced by n, namespaced if it is scoped to a namespace during registration
+     * 
+     * @param {*} n 
+     * @param {*} namespaceId optional namespaceId to override the type namespace; rarely used
+     * @returns 
+     */
+    name(n, namespaceId) {
         assert(_.isString(n), 'name argument must be string');
 
         assert(this.get(n), `type (name=${n}) is not defined`);
+
+        if (namespaceId) return `${namespaceId}::${n}`;
 
         const namespace = this.namespacedTypes[n];
 

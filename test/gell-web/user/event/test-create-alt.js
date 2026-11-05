@@ -107,11 +107,12 @@ describe('create user (alt)', function() {
             })
 
             it('returns created user', async function() {
+                console.debug('#####', caller);
                 const user_ = await this.createUser('user@test.com', 'admin', 'UNITTEST:ADMIN');
 
                 const user$ = user_.snapshot();
 
-                assert.strictEqual(user$.type, 'WEB#USER');
+                assert.strictEqual(user$.type, 'UNITTEST:BLUEHOUR::WEB#USER');
                 assert.strictEqual(user$.parentId, 'UNITTEST:ADMIN');
             })
 
@@ -163,7 +164,7 @@ describe('create user (alt)', function() {
 
                 const user$ = user_.snapshot();
 
-                assert.strictEqual(user$.type, 'WEB#USER');
+                assert.strictEqual(user$.type, 'UNITTEST:BLUEHOUR::WEB#USER');
                 assert.strictEqual(user$.parentId, 'UNITTEST:OPS');
             })
         })

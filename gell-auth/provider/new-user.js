@@ -12,7 +12,7 @@ import auth from '../action/auth-newuser';
  *  - creates and persists new user on the fly
  *  - could potentially pass in id and/or name as arguments
  */
-export default function newUserProvider(namespaceId, deps) {
+export default function newUserProvider(application, deps) {
     assert(deps, 'deps is required');
 
     return CredentialsProvider({
@@ -33,10 +33,6 @@ export default function newUserProvider(namespaceId, deps) {
         },
 
         async authorize(credentials) {
-            const application = {
-                namespaceId
-            }
-
             return auth.effect({
                 params: credentials,
                 context: {

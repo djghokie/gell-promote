@@ -20,13 +20,13 @@ export default function passwordlessProvider(application, deps) {
         name: 'Passwordless Credentials Provider',
 
         credentials: {
-            email: {
-                label: 'Email',
+            userId: {
+                label: 'User ID',
                 type: 'email',
                 placeholder: 'your@email.com'
             },
-            role: {
-                label: 'Role (creates the user)',
+            tenantId: {
+                label: 'Tenant',
                 type: 'text'
             },
         },

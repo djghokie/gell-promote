@@ -38,11 +38,20 @@ async function lookupById(id, deps) {
         logger.warn(`no user (id=${id}; type=${type}) found`);
 }
 
-async function lookupByUserId(userId, application, deps) {
+/**
+ * NOTE: namespaceId allows fetching users from an alternate namespace
+ *  - used only in auth scenarios
+ * 
+ * @param {*} application_ 
+ * @param {*} namespaceId 
+ * @param {*} deps 
+ * @returns 
+ */
+async function lookupByUserId(userId, application, namespaceId, deps) {
     const { logger, store } = deps.resolve('logger', 'store');
     const types = deps.resolveSingle({ name: 'types', optional: true });
 
-    const type = types ? types.name(user.TYPE) : user.TYPE;
+    const type = types ? types.name(user.TYPE, namespaceId) : user.TYPE;
 
     const applicationId = application.id;
 
@@ -63,8 +72,10 @@ exports.effect = async function({ params={}, context={}, deps }) {
     const { id, userId } = params;
 
     if (id) return lookupById(id, deps);
+
+    const { application, namespaceId } = context;
     
-    if (userId) return lookupByUserId(userId, context.application, deps);
+    if (userId) return lookupByUserId(userId, application, namespaceId, deps);
 
     throw new Error('either id or userId is required');
 }
