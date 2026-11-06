@@ -10,6 +10,7 @@ const operationWrapper = require('gell-aws-dynamodb/operation-wrapper');
 const sessionOperations = operationWrapper.ut(require('gell-session/dynamodb/operations'));
 
 const { createInitiate, createUpdate } = require('../../../gell-session/util/event');
+const { Types } = require('../../../gell-discover/domain/types');
 
 const TYPE = "TEST";
 
@@ -152,6 +153,71 @@ describe('event generation utility', function() {
                 assert.strictEqual(session$.type, 'TEST');
                 assert.strictEqual(session$.message, 'world!');
                 assert.strictEqual(session$.parentId, parent_.id);
+            })
+        })
+
+        describe('namespaced type', function() {
+            let deps;
+
+            beforeEach(function() {
+                const types = new Types();
+                types.register(TYPE, model, 'APPLICATION');
+                types.set('APPLICATION', 'UNITTEST:ADMIN');
+
+                deps = this.deps.branch({ types });
+            })
+
+            it('action namespaces type through types registry', async function() {
+                const session_ = await initiate.action({
+                    params: { parentId: parent_.id },
+                    deps
+                });
+
+                assert.strictEqual(session_.get('type'), 'UNITTEST:ADMIN::TEST');
+            })
+
+            it('action ignores type parameter', async function() {
+                const session_ = await initiate.action({
+                    params: { parentId: parent_.id, type: 'OTHER' },
+                    deps
+                });
+
+                assert.strictEqual(session_.get('type'), 'UNITTEST:ADMIN::TEST');
+            })
+
+            it('effect namespaceId overrides registered namespace', async function() {
+                const session_ = await initiate.effect({
+                    context: { parent_, namespaceId: 'UNITTEST:OTHER' },
+                    deps
+                });
+
+                assert.strictEqual(session_.get('type'), 'UNITTEST:OTHER::TEST');
+            })
+        })
+
+        describe('validate option', function() {
+            it('receives session with type and parentId', async function() {
+                let validated$;
+
+                const validating = createInitiate({}, type, { validate: async ({ session$ }) => validated$ = session$ });
+
+                await validating.effect({ params: { title: 'gello' }, context: { parent_ }, deps: this.deps });
+
+                assert.strictEqual(validated$.type, 'TEST');
+                assert.strictEqual(validated$.parentId, parent_.id);
+                assert.strictEqual(validated$.title, 'gello');
+            })
+
+            it('rejects and saves nothing when validate throws', async function() {
+                const rejecting = createInitiate({}, type, { validate: async () => { throw new Error('invalid') } });
+
+                const $txn = store.write();
+
+                await assert.rejects(rejecting.effect({ context: { parent_, $txn }, deps: this.deps }), /invalid/);
+
+                await $txn.return().value;
+
+                assert.strictEqual(store.select({ type: TYPE }).length, 0);
             })
         })
     })

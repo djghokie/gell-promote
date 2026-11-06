@@ -28,6 +28,15 @@ const activate = require('gell-session/event/activate');
  *  - more in line with the vision of modeling all applications as a series of sessions
  *  - perhaps we could make this optional
  *      - don't think we want to do that tho
+ * 
+ * NOTE: the stored type is namespaced through the "types" registry (when one is defined and has the type registered)
+ *  - the effect accepts context.namespaceId to override the registered namespace (same as types.name)
+ *  - the type is always set here, so a type passed in params is ignored
+ * 
+ * OPTIONS
+ *  - activate: activates the new session
+ *  - validate: async ({ session$, parent$, deps }) called before the session is initiated; throw to reject
+ *      - session$ already has its (namespaced) type and parentId
  */
 function createInitiate(__metadata={}, type, options) {
     assert(type, 'gell type is required');
@@ -39,17 +48,22 @@ function createInitiate(__metadata={}, type, options) {
 
     const { name } = __metadata;
 
-    async function doInitiate(parent$, defaults, $txn, deps) {
+    async function doInitiate(parent$, defaults, namespaceId, $txn, deps) {
+        const session$ = Object.assign({}, defaults, {
+            type: typeName(type, deps, namespaceId),
+            parentId: parent$.id
+        });
+
+        if (options?.validate) await options.validate({ session$, parent$, deps });
+
         const session_ = await initiate.effect({
             context: {
                 model: type,
-                session$: defaults,
+                session$,
                 $txn
             },
             deps
         });
-
-        session_.set('parentId', parent$.id);
 
         if (options?.activate) {
             await activate.effect({
@@ -71,7 +85,7 @@ function createInitiate(__metadata={}, type, options) {
         const { parent_ } = context;
         assert(parent_, 'parent_ is required');
 
-        return doInitiate(parent_.snapshotPartial(['id']), params, context.$txn, deps);
+        return doInitiate(parent_.snapshotPartial(['id']), params, context.namespaceId, context.$txn, deps);
     }
 
     async function action({ params={}, context={}, deps }) {
@@ -93,7 +107,7 @@ function createInitiate(__metadata={}, type, options) {
             deps
         });
 
-        return doInitiate(parent$, params, context.$txn, deps);
+        return doInitiate(parent$, params, undefined, context.$txn, deps);
     }
 
     return { __metadata, effect, action };
@@ -124,11 +138,13 @@ function findAttribute(model, attribute) {
 /**
  * Resolves the stored type name: namespaced through the "types" registry when one is defined and has the
  * type registered, otherwise the bare TYPE
+ *
+ * NOTE: namespaceId is optional and overrides the registered namespace (see types.name)
  */
-function typeName(type, deps) {
+function typeName(type, deps, namespaceId) {
     const types = deps.resolveSingle({ name: 'types', optional: true });
 
-    return types && types.get(type.TYPE) ? types.name(type.TYPE) : type.TYPE;
+    return types && types.get(type.TYPE) ? types.name(type.TYPE, namespaceId) : type.TYPE;
 }
 
 /**
