@@ -77,13 +77,14 @@ async function resolveApplication(applicationId, caller, context, deps) {
     logger.warn('no application associated with request; user will be created in default namespace');
 }
 
-async function lookupUser(userId, application, deps) {
+async function lookupUser(userId, application, namespaceId, deps) {
     const user_ = await userLookup.effect({
         params: {
             userId,
         },
         context: {
-            application
+            application,
+            namespaceId
         },
         deps
     })
@@ -107,7 +108,7 @@ async function doCreate(email, role, application, namespaceId, $txn, deps) {
 
     const type = types ? types.name(user.TYPE, namespaceId) : user.TYPE;
 
-    await lookupUser(normalizedEmail, application, deps);
+    await lookupUser(normalizedEmail, application, namespaceId, deps);
 
     logger.info(`creating user (type=${type}; userId=${normalizedEmail})`);
 

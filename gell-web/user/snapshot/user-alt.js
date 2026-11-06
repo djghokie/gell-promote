@@ -74,6 +74,7 @@ exports.effect = async function({ params={}, context={}, deps }) {
     if (id) return lookupById(id, deps);
 
     const { application, namespaceId } = context;
+    assert(application);
     
     if (userId) return lookupByUserId(userId, application, namespaceId, deps);
 
