@@ -25,10 +25,6 @@ export default function passwordlessProvider(application, deps) {
                 type: 'email',
                 placeholder: 'your@email.com'
             },
-            tenantId: {
-                label: 'Tenant',
-                type: 'text'
-            },
         },
 
         async authorize(credentials) {

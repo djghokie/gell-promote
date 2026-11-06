@@ -13,6 +13,9 @@ const userLookup = require('../snapshot/user-alt');
 /**
  * WIP: re-implementation of user create action
  *  - currently passing in email; this may change to userId
+ *
+ * NOTE: a USER is the identity in an APPLICATION (parentId), with its type namespaced by the APPLICATION
+ *  - roles are not held by the USER; a USER's role in a TENANT is its MEMBER (web.member.create)
  */
 exports.__metadata = {
     name: 'web.user.create.alt',
@@ -21,14 +24,16 @@ exports.__metadata = {
         effect: {
             params: {
                 email: 'string',
-                role: 'string',
             },
             transaction: 'JOIN'
         },
         action: {
             params: {
                 email: 'string',
-                role: 'string',
+                applicationId: {
+                    type: 'string',
+                    optional: true
+                },
             },
             transaction: 'NEW'
         }
@@ -77,14 +82,13 @@ async function resolveApplication(applicationId, caller, context, deps) {
     logger.warn('no application associated with request; user will be created in default namespace');
 }
 
-async function lookupUser(userId, application, namespaceId, deps) {
+async function lookupUser(userId, application, deps) {
     const user_ = await userLookup.effect({
         params: {
             userId,
         },
         context: {
-            application,
-            namespaceId
+            application
         },
         deps
     })
@@ -94,7 +98,10 @@ async function lookupUser(userId, application, namespaceId, deps) {
     }
 }
 
-async function doCreate(email, role, application, namespaceId, $txn, deps) {
+/**
+ * NOTE: the type is namespaced by the APPLICATION's id; without an APPLICATION, the registered namespace is used
+ */
+async function doCreate(email, application, $txn, deps) {
     const { logger } = deps.resolve('logger');
     const types = deps.resolveSingle({ name: 'types', optional: true });
 
@@ -102,13 +109,11 @@ async function doCreate(email, role, application, namespaceId, $txn, deps) {
     const normalizedEmail = email.trim().toLowerCase();
     assert(EMAIL_PATTERN.test(normalizedEmail), `email is invalid (email=${normalizedEmail})`);
 
-    assert(_.isString(role), 'role is required');
-
     if (application) var applicationId = application.id; 
 
-    const type = types ? types.name(user.TYPE, namespaceId) : user.TYPE;
+    const type = types ? types.name(user.TYPE, applicationId) : user.TYPE;
 
-    await lookupUser(normalizedEmail, application, namespaceId, deps);
+    await lookupUser(normalizedEmail, application, deps);
 
     logger.info(`creating user (type=${type}; userId=${normalizedEmail})`);
 
@@ -116,12 +121,9 @@ async function doCreate(email, role, application, namespaceId, $txn, deps) {
         type,
         userId: normalizedEmail,
         email: normalizedEmail,
-        roles: [role],
         status: 'AUTHORIZED',
         parentId: applicationId,
-        // namspaceId
     });
-    user_.set('namespaceId', namespaceId);
 
     await activate.effect({
         context: {
@@ -140,10 +142,10 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     logger.info('executing effect (name="web.user.create.alt")');
 
-    const { email, role } = params;
-    const { application, namespaceId, $txn } = context;
+    const { email } = params;
+    const { application, $txn } = context;
 
-    return doCreate(email, role, application, namespaceId, $txn, deps);
+    return doCreate(email, application, $txn, deps);
 }
 
 /**
@@ -154,12 +156,10 @@ exports.action = async function({ params={}, context={}, caller, deps }) {
 
     logger.info('executing action (name="web.user.create.alt")');
 
-    const { email, role, applicationId } = params;
+    const { email, applicationId } = params;
     const { $txn } = context;
 
     const application = await resolveApplication(applicationId, caller, context, deps);
 
-    const namspaceId = caller.snapshotAttribute('namespaceId');
-
-    return doCreate(email, role, application, namspaceId, $txn, deps);
+    return doCreate(email, application, $txn, deps);
 }

@@ -32,12 +32,10 @@ describe('passwordless auth action', function() {
         this.createUser = async function(userId, application={}) {
             const user_ = await createUser.effect({
                 params: {
-                    email: userId,
-                    role: 'viewer'
+                    email: userId
                 },
                 context: {
-                    application,
-                    namespaceId: 'UNITTEST'
+                    application
                 },
                 deps: this.deps
             });
@@ -67,9 +65,9 @@ describe('passwordless auth action', function() {
     
                 const existing_ = await this.createUser(userId, application);
 
+                // NOTE: no TENANT; USERs are scoped to the APPLICATION
                 credentials = {
-                    userId,
-                    tenantId: existing_.snapshotAttribute('namespaceId')
+                    userId
                 };
     
                 // console.debug('#####', existing_);
@@ -95,9 +93,9 @@ describe('passwordless auth action', function() {
     
                 const existing_ = await this.createUser(userId, application);
     
+                // NOTE: no TENANT; USERs are scoped to the APPLICATION
                 credentials = {
-                    userId,
-                    tenantId: existing_.snapshotAttribute('namespaceId')
+                    userId
                 };
     
                 // console.debug('#####', existing_);

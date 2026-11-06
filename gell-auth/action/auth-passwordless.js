@@ -18,14 +18,16 @@ exports.__metadata = {
     }
 }
 
-async function lookupUser(userId, application, namespaceId, deps) {
+/**
+ * NOTE: USERs are scoped to the APPLICATION, so no TENANT is needed to sign in
+ */
+async function lookupUser(userId, application, deps) {
     return user.effect({
         params: {
             userId
         },
         context: {
-            application,
-            namespaceId
+            application
         },
         deps
     })
@@ -36,14 +38,13 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     logger.info('executing effect (name="web.user.auth.passwordless")');
 
-    const { userId, tenantId } = params;
+    const { userId } = params;
     const { application } = context;
 
     try {
         assert(_.isString(userId), 'userId string is required');
-        assert(_.isString(tenantId), 'namespaceId string is required');
     
-        const user_ = await lookupUser(userId, application, tenantId, deps);
+        const user_ = await lookupUser(userId, application, deps);
     
         if (user_) return user_.snapshot();
     } catch (e) {

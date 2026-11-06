@@ -83,12 +83,22 @@ describe('create user (alt)', function() {
                 return assert.rejects(z => this.createUser('user@test.com', 'admin', 'UNITTEST:WEB'));
             })
 
-            it('saves user correctly', async function() {
+            it('saves user namespaced by the application', async function() {
                 const user_ = await this.createUser('user@test.com', 'admin', 'UNITTEST:ADMIN');
 
                 const [user$] = store.select({ id: user_.id });
 
-                assert.strictEqual(user$.namespaceId, 'UNITTEST:BLUEHOUR');
+                assert.strictEqual(user$.type, 'UNITTEST:ADMIN::WEB#USER');
+                assert.strictEqual(user$.parentId, 'UNITTEST:ADMIN');
+            })
+
+            it('saves user without roles', async function() {
+                const user_ = await this.createUser('user@test.com', 'admin', 'UNITTEST:ADMIN');
+
+                const [user$] = store.select({ id: user_.id });
+
+                assert.strictEqual(user$.roles, undefined);
+                assert.strictEqual(user$.namespaceId, undefined);
             })
         })
 
@@ -112,7 +122,7 @@ describe('create user (alt)', function() {
 
                 const user$ = user_.snapshot();
 
-                assert.strictEqual(user$.type, 'UNITTEST:BLUEHOUR::WEB#USER');
+                assert.strictEqual(user$.type, 'UNITTEST:ADMIN::WEB#USER');
                 assert.strictEqual(user$.parentId, 'UNITTEST:ADMIN');
             })
 
@@ -164,7 +174,7 @@ describe('create user (alt)', function() {
 
                 const user$ = user_.snapshot();
 
-                assert.strictEqual(user$.type, 'UNITTEST:BLUEHOUR::WEB#USER');
+                assert.strictEqual(user$.type, 'UNITTEST:OPS::WEB#USER');
                 assert.strictEqual(user$.parentId, 'UNITTEST:OPS');
             })
         })

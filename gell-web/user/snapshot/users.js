@@ -27,19 +27,18 @@ exports.__metadata = {
 }
 
 /**
- * NOTE: namespaceId allows fetching users from an alternate namespace
- *  - rarely used
+ * NOTE: USERs are namespaced by their APPLICATION
  * 
  * @param {*} application_ 
- * @param {*} namespaceId 
  * @param {*} deps 
  * @returns 
  */
-async function doFetch(application_, namespaceId, deps) {
-    const { logger, store, types } = deps.resolve('logger', 'store', 'types');
+async function doFetch(application_, deps) {
+    const { logger, store } = deps.resolve('logger', 'store');
+    const types = deps.resolveSingle({ name: 'types', optional: true });
 
-    const userType = types.name(user.TYPE, namespaceId);
     const parentId = application_.id;
+    const userType = types ? types.name(user.TYPE, parentId) : user.TYPE;
 
     logger.info(`fetching users (type=${userType}; parentId=${parentId})`);
 
@@ -55,10 +54,10 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     logger.info('executing effect (name="web.users")');
 
-    const { application_, namespaceId } = context;
+    const { application_ } = context;
     assert(application_, 'application_ is required');
 
-    return doFetch(application_, namespaceId, deps);
+    return doFetch(application_, deps);
 }
 
 exports.api = async function({ caller, params={}, deps }) {
@@ -91,5 +90,5 @@ exports.api = async function({ caller, params={}, deps }) {
         else return store.drain('sessions.active.type', user.TYPE);
     }
 
-    return doFetch(application_, undefined, deps);
+    return doFetch(application_, deps);
 }

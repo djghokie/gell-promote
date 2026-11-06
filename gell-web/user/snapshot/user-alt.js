@@ -39,21 +39,23 @@ async function lookupById(id, deps) {
 }
 
 /**
- * NOTE: namespaceId allows fetching users from an alternate namespace
- *  - used only in auth scenarios
+ * NOTE: USERs are namespaced by their APPLICATION, so the APPLICATION is enough to find a USER
+ *  - used in auth scenarios, where there is no namespaced types registry
  * 
- * @param {*} application_ 
- * @param {*} namespaceId 
+ * @param {*} userId 
+ * @param {*} application 
  * @param {*} deps 
  * @returns 
  */
-async function lookupByUserId(userId, application, namespaceId, deps) {
+async function lookupByUserId(userId, application, deps) {
     const { logger, store } = deps.resolve('logger', 'store');
     const types = deps.resolveSingle({ name: 'types', optional: true });
 
-    const type = types ? types.name(user.TYPE, namespaceId) : user.TYPE;
+    assert(application, 'application is required');
 
     const applicationId = application.id;
+
+    const type = types ? types.name(user.TYPE, applicationId) : user.TYPE;
 
     logger.info(`looking up user (userId=${userId}; type=${type})`);
 
@@ -73,14 +75,17 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     if (id) return lookupById(id, deps);
 
-    const { application, namespaceId } = context;
+    const { application } = context;
     assert(application);
     
-    if (userId) return lookupByUserId(userId, application, namespaceId, deps);
+    if (userId) return lookupByUserId(userId, application, deps);
 
     throw new Error('either id or userId is required');
 }
 
+/**
+ * WIP: lookup by userId needs an APPLICATION in context, which api callers don't provide yet
+ */
 exports.api = async function({ params={}, context={}, deps }) {
     const { logger } = deps.resolve('logger');
 
@@ -93,7 +98,7 @@ exports.api = async function({ params={}, context={}, deps }) {
         if (!user_) throw Object.assign(new Error(`user not found (id=${id})`), { status: 404 });
     }
     else if (userId) {
-        var user_ = await lookupByUserId(userId, deps);
+        var user_ = await lookupByUserId(userId, context.application, deps);
         if (!user_) throw Object.assign(new Error(`user not found (userId=${userId})`), { status: 404 });
     }
     else throw new Error('either id or userId is required');

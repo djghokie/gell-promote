@@ -43,23 +43,18 @@ module.exports = function(application, deps) {
         // console.debug('##### jwt', token, user, account);
 
         if (account && account.provider === 'google') {
-            /**
-             * WIP: there is no way to pass the selected tenant in
-             */
-
-            const namespaceId = '???';
-
+            // NOTE: USERs are scoped to the APPLICATION, so the email is enough to find the USER
             const user_ = await userLookup.effect({
                 params: {
                     userId: user.email
                 },
                 context: {
-                    application,
-                    namespaceId
+                    application
                 },
                 deps
             });
 
+            // WIP: USERs no longer hold roles; the role comes from the selected TENANT's MEMBER (user-auth increment 4)
             if (user_) {
                 const roles = user_.snapshotAttribute('roles');
                 if (roles?.length > 0) token.role = roles[0];

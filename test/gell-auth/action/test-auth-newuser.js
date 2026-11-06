@@ -79,7 +79,8 @@ describe('newuser auth action', function() {
                 });
 
                 assert.strictEqual(user$.userId, userId);
-                assert.strictEqual(user$.roles[0], 'admin');
+                // NOTE: USERs don't hold roles; the role belongs to a MEMBER
+                assert.strictEqual(user$.roles, undefined);
             })
         })
     })

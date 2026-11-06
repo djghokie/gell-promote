@@ -16,18 +16,14 @@ describe('jwt callback', function() {
 
     let application, store;
 
-    const namespaceId = 'BLUEHOUR';
-
     beforeEach(function() {
-        this.createUser = async function(userId, role="viewer") {
+        this.createUser = async function(userId) {
             const user_ = await userCreate.effect({
                 params: {
-                    email: userId,
-                    role
+                    email: userId
                 },
                 context: {
-                    application,
-                    namespaceId
+                    application
                 },
                 deps: this.deps
             });
@@ -44,7 +40,7 @@ describe('jwt callback', function() {
          *  - this affects the user lookup effect
          */
         const { types } = this.deps.resolve('types');
-        types.register(user.TYPE, user.model, 'TENANT');
+        types.register(user.TYPE, user.model, 'APPLICATION');
 
         store = this.deps.resolveSingle('store');
 
@@ -78,6 +74,7 @@ describe('jwt callback', function() {
             assert(_.isUndefined(role));
         })
     
+        // WIP: role comes from the selected TENANT's MEMBER (user-auth increment 4)
         it.skip('populates token correctly', async function() {
             const userId = 'viwewer@#test.com';
 

@@ -23,8 +23,7 @@ exports.__metadata = {
 }
 
 /**
- * WIP: this credential provider can't be currently used because users must be associated with a tenant
- *  - could change the signin UI to allow selection of tenant
+ * WIP: role isn't assigned yet; it belongs to a MEMBER of the TENANT selected on the sign in page (user-auth increment 4)
  * 
  * @param {*} userId 
  * @param {*} role 
@@ -42,8 +41,7 @@ async function createUser(userId, role, application={}, deps) {
      */
     const user_ = await user.effect({
         params: {
-            email: userId,
-            role
+            email: userId
         },
         context: {
             application
