@@ -77,14 +77,14 @@ describe('api middleware', function() {
 
             const types = context.deps.resolveSingle('types');
 
-            assert.strictEqual(types.snapshotAttribute('TENANT'), 'TEST:TENANT');
-            assert.strictEqual(types.snapshotAttribute('ECOSYSTEM'), 'TEST');
+            assert.strictEqual(types.get('namespace', 'TENANT'), 'TEST:TENANT');
+            assert.strictEqual(types.get('namespace', 'ECOSYSTEM'), 'TEST');
         })
 
         it('leaves the registered types unchanged', async function() {
             await load(context);
 
-            assert.strictEqual(this.deps.resolveSingle('types').snapshotAttribute('TENANT'), undefined);
+            assert.strictEqual(this.deps.resolveSingle('types').get('namespace', 'TENANT'), undefined);
         })
     })
 })

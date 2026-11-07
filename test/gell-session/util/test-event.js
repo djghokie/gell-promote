@@ -162,7 +162,7 @@ describe('event generation utility', function() {
             beforeEach(function() {
                 const types = new Types();
                 types.register(TYPE, model, 'APPLICATION');
-                types.set('APPLICATION', 'UNITTEST:ADMIN');
+                types.set('namespace', 'UNITTEST:ADMIN', 'APPLICATION');
 
                 deps = this.deps.branch({ types });
             })
@@ -289,7 +289,7 @@ describe('event generation utility', function() {
 
                 const types_ = new Types();
                 types_.register(type.TYPE, type.model, 'NS');
-                types_.set('NS', 'SPACE');
+                types_.set('namespace', 'SPACE', 'NS');
 
                 this.deps.define('types', types_);
 

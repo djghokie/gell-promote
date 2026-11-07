@@ -34,7 +34,7 @@ exports.__metadata = {
 async function resolveApplication(deps) {
     const types = deps.resolveSingle({ name: 'types', optional: true });
 
-    const applicationId = types?.snapshotAttribute('APPLICATION');
+    const applicationId = types?.get('namespace', 'APPLICATION');
 
     assert(_.isString(applicationId), 'APPLICATION namespace is required');
 

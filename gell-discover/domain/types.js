@@ -7,6 +7,16 @@ const javascript = require('gell-domain/binding/javascript');
 
 const DEFAULT_DELIMETER = '::';
 
+// NOTE: namespace ids are stored under this attribute, with the namespace name as the actor
+const NAMESPACE = 'namespace';
+
+/**
+ * Registry of type models (default attributes, name => model)
+ *
+ * Namespace ids are stored with the namespace name as the actor, so they are not listed as types:
+ *      types.set('namespace', 'INCUBATOR', 'ECOSYSTEM');
+ *      types.get('namespace', 'ECOSYSTEM');   // => 'INCUBATOR'
+ */
 class Types extends State {
 
     delimeter = DEFAULT_DELIMETER;
@@ -73,7 +83,7 @@ class Types extends State {
         // console.debug('#####', name, namespace);
         
         if (namespace) {
-            const namespaceId = this.snapshotAttribute(namespace);
+            const namespaceId = this.get(NAMESPACE, namespace);
             
             // console.debug('#####', namespaceId);
 
@@ -123,7 +133,9 @@ class Types extends State {
      *  - registered types stay the same
      *  - namespaces don't carry over between calls to clone
      *      - probably easier to do if namespaces were't stored as state attributes
-     * 
+     *          - NOTE: namespaces are now stored under the "namespace" attribute per namespace actor, so they
+     *            aren't listed as types; cloneDeep still copies them (and the models) on every clone
+     *
      * @returns cloned types registry
      */
     clone() {
@@ -142,6 +154,7 @@ const model = {
 */
 
 module.exports = {
+    NAMESPACE,
     Types,
     // model,
     // materialize: session$ => javascript.materialize(session$, model)

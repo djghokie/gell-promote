@@ -35,9 +35,9 @@ module.exports = function* namespaceLoader(application, ecosystem) {
 
         const namespacedTypes = deps.resolveSingle('types').clone();
 
-        namespacedTypes.set('ECOSYSTEM', ecosystem);
-        namespacedTypes.set('APPLICATION', application.id);
-        namespacedTypes.set('TENANT', tenantId);
+        namespacedTypes.set('namespace', ecosystem, 'ECOSYSTEM');
+        namespacedTypes.set('namespace', application.id, 'APPLICATION');
+        namespacedTypes.set('namespace', tenantId, 'TENANT');
 
         context.deps = deps.branch({ types: namespacedTypes });
     }

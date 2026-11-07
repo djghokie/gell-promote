@@ -91,7 +91,7 @@ describe('types registy', function() {
 
         it('with namespace', function() {
             types.register(type.TYPE, type.model, 'ECOSYSTEM');
-            types.set('ECOSYSTEM', 'INCUBATOR');
+            types.set('namespace', 'INCUBATOR', 'ECOSYSTEM');
 
             const name = types.name(type.TYPE);
 
@@ -100,7 +100,7 @@ describe('types registy', function() {
 
         it('namespaceId argument overrides the registered namespace', function() {
             types.register(type.TYPE, type.model, 'ECOSYSTEM');
-            types.set('ECOSYSTEM', 'INCUBATOR');
+            types.set('namespace', 'INCUBATOR', 'ECOSYSTEM');
 
             const name = types.name(type.TYPE, 'OTHER');
 
@@ -153,7 +153,7 @@ describe('types registy', function() {
     describe('clone', function() {
         beforeEach(function() {
             types.register(type.TYPE, type.model, 'APPLICATION');
-            types.set('APPLICATION', 'INCUBATOR:WEB');
+            types.set('namespace', 'INCUBATOR:WEB', 'APPLICATION');
         })
 
         it('keeps registered types and namespaces', function() {
@@ -165,7 +165,7 @@ describe('types registy', function() {
 
         it('namespace changes do not carry back to the original', function() {
             const clone = types.clone();
-            clone.set('APPLICATION', 'INCUBATOR:ADMIN');
+            clone.set('namespace', 'INCUBATOR:ADMIN', 'APPLICATION');
 
             assert.strictEqual(clone.name(type.TYPE), 'INCUBATOR:ADMIN::UNITTEST#TYPE');
             assert.strictEqual(types.name(type.TYPE), 'INCUBATOR:WEB::UNITTEST#TYPE');
@@ -180,12 +180,50 @@ describe('types registy', function() {
             assert.strictEqual(types.namespacedTypes.BROWSER, undefined);
         })
 
-        /**
-         * NOTE: namespaces are stored as state attributes, so they show up alongside type names
-         *  - documents the open gell-discover TODO ("namespace should not be stored as attribute")
-         */
-        it('namespaces are listed with type names', function() {
-            assert.deepStrictEqual(Array.from(types.names()), [type.TYPE, 'APPLICATION']);
+    })
+
+    /**
+     * NOTE: namespace ids are stored under the "namespace" attribute, with the namespace name as the actor
+     */
+    describe('namespaces', function() {
+        beforeEach(function() {
+            types.register(type.TYPE, type.model, 'APPLICATION');
+            types.set('namespace', 'INCUBATOR:WEB', 'APPLICATION');
+            types.set('namespace', 'INCUBATOR', 'ECOSYSTEM');
+        })
+
+        it('are not listed with type names', function() {
+            assert.deepStrictEqual(Array.from(types.names()), [type.TYPE]);
+        })
+
+        it('are not in the default snapshot', function() {
+            const types$ = types.snapshot();
+
+            assert.deepStrictEqual(Object.keys(types$), [type.TYPE]);
+            assert.strictEqual(types$.namespace, undefined);
+        })
+
+        it('are read per namespace actor', function() {
+            assert.strictEqual(types.get('namespace', 'APPLICATION'), 'INCUBATOR:WEB');
+            assert.strictEqual(types.get('namespace', 'ECOSYSTEM'), 'INCUBATOR');
+            assert.strictEqual(types.get('namespace', 'TENANT'), undefined);
+        })
+
+        it('namespace name is not a type', function() {
+            assert.throws(() => types.name('APPLICATION'), /type \(name=APPLICATION\) is not defined/);
+        })
+
+        it('removing a namespace un-defines it', function() {
+            types.remove('namespace', 'APPLICATION');
+
+            assert.throws(() => types.name(type.TYPE), /namespace \(name=APPLICATION\) is not defined/);
+        })
+
+        it('a type and a namespace can share a name', function() {
+            types.register('ECOSYSTEM', session.model, 'ECOSYSTEM');
+
+            assert.strictEqual(types.name('ECOSYSTEM'), 'INCUBATOR::ECOSYSTEM');
+            assert.strictEqual(types.get('ECOSYSTEM'), session.model);
         })
     })
 
@@ -194,8 +232,8 @@ describe('types registy', function() {
      */
     describe('instances', function() {
         beforeEach(function() {
-            types.set('ECOSYSTEM', 'INCUBATOR');
-            types.set('APPLICATION', 'INCUBATOR:WEB');
+            types.set('namespace', 'INCUBATOR', 'ECOSYSTEM');
+            types.set('namespace', 'INCUBATOR:WEB', 'APPLICATION');
         })
     
         it('fails if no name provided', function() {
@@ -312,11 +350,11 @@ describe('types registy', function() {
          */
         it('changing namespaces', function() {
             const webTypes = types.clone();
-            webTypes.set('ECOSYSTEM', 'INCUBATOR');
-            webTypes.set('APPLICATION', 'INCUBATOR:WEB');
+            webTypes.set('namespace', 'INCUBATOR', 'ECOSYSTEM');
+            webTypes.set('namespace', 'INCUBATOR:WEB', 'APPLICATION');
 
             const adminTypes = types.clone();
-            adminTypes.set('APPLICATION', 'INCUBATOR:ADMIN');
+            adminTypes.set('namespace', 'INCUBATOR:ADMIN', 'APPLICATION');
 
             const webInstance_ = webTypes.instance('BROWSER');
             const web$ = webInstance_.snapshot();
@@ -401,7 +439,7 @@ describe('types registy', function() {
 
             registerExtension(vehicle);
 
-            types.set('TENANT', 'INCUBATOR:PEAKSHUTTLE');
+            types.set('namespace', 'INCUBATOR:PEAKSHUTTLE', 'TENANT');
         })
     
         it('instance creation works', function() {

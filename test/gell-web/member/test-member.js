@@ -36,7 +36,7 @@ describe('MEMBER', function() {
         store.writeOptions.namedOperations = sessionOperations;
 
         types = this.deps.resolveSingle('types');
-        types.set('APPLICATION', APPLICATION_ID);
+        types.set('namespace', APPLICATION_ID, 'APPLICATION');
 
         bluehour = tenant.materialize({ id: 'UNITTEST:BLUEHOUR', name: 'Blue Hour' });
         peaktravel = tenant.materialize({ id: 'UNITTEST:PEAKTRAVEL', name: 'Peak Travel' });
@@ -216,7 +216,7 @@ describe('MEMBER', function() {
 
         it('application (context) namespaces the lookup', async function() {
             // NOTE: sign in has no namespaced types registry
-            types.set('APPLICATION', undefined);
+            types.set('namespace', undefined, 'APPLICATION');
 
             const member_ = await lookup.effect({
                 params: { tenantId: 'UNITTEST:BLUEHOUR', userId: 'user@test.com' },
