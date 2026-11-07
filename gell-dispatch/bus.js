@@ -115,12 +115,23 @@ module.exports = function*($resolver, middleware, deps) {
             e.throw();
         }
 
+        /**
+         * NOTE: each invocation gets its own dependency container, branched from the deps passed in (or the bus deps)
+         *  - middleware and triggers can define invocation scoped dependencies (e.g. namespaced types) on it without
+         *    affecting other invocations or the common container
+         *  - a nested dispatch passing event.deps branches again, so it inherits (and can override) the outer
+         *    invocation's dependencies
+         *
+         * WIP: gell-dependency builds a singleton with the container that first resolves it, so a root singleton first
+         * resolved during an invocation is built with that invocation's branch; singleton factories must not resolve
+         * (or keep) invocation scoped dependencies such as types
+         */
         const event = {
             caller,
             source,
             params,
             context,
-            deps
+            deps: deps.branch()
         };
 
         /**

@@ -52,9 +52,14 @@ describe('types namespace middleware', function() {
         })
     })
 
+    // NOTE: the bus gives each event its own container (a branch of the common deps); these tests do the same
+    function event(tenantId, deps) {
+        return { caller: caller(tenantId), deps: deps.branch(), context: {} };
+    }
+
     describe('caller with a TENANT', function() {
         it('event types are namespaced by the caller TENANT', async function() {
-            await middleware({ caller: caller('TEST:TENANT'), deps: this.deps, context: {} }, resume);
+            await middleware(event('TEST:TENANT', this.deps), resume);
 
             const types_ = resumed.deps.resolveSingle('types');
 
@@ -62,95 +67,98 @@ describe('types namespace middleware', function() {
             assert.strictEqual(types_.name(TYPE), `TEST:TENANT::${TYPE}`);
         })
 
+        it('defines types on the event container', async function() {
+            const e = event('TEST:TENANT', this.deps);
+
+            await middleware(e, resume);
+
+            assert.strictEqual(resumed, e);
+            assert(e.deps.find('types', false), 'types should be defined on the event container');
+        })
+
         it('keeps the root namespaces', async function() {
-            await middleware({ caller: caller('TEST:TENANT'), deps: this.deps, context: {} }, resume);
+            await middleware(event('TEST:TENANT', this.deps), resume);
 
             assert.strictEqual(resumed.deps.resolveSingle('types').get('namespace', 'ECOSYSTEM'), 'TEST');
         })
 
         it('leaves the root types registry unchanged', async function() {
-            await middleware({ caller: caller('TEST:TENANT'), deps: this.deps, context: {} }, resume);
+            await middleware(event('TEST:TENANT', this.deps), resume);
 
             assert.notStrictEqual(resumed.deps.resolveSingle('types'), types);
-            assert.strictEqual(this.deps.resolveSingle('types').get('namespace', 'TENANT'), undefined);
+            assert.strictEqual(this.deps.resolveSingle('types'), types);
+            assert.strictEqual(types.get('namespace', 'TENANT'), undefined);
         })
 
-        it('keeps the rest of the event', async function() {
-            const context = {};
-            const __invocationSpec = { route: 'unittest.event#action' };
-            const params = { a: 1 };
-
-            await middleware({ caller: caller('TEST:TENANT'), deps: this.deps, context, params, __invocationSpec }, resume);
-
-            assert.strictEqual(resumed.context, context);
-            assert.strictEqual(resumed.params, params);
-            assert.strictEqual(resumed.__invocationSpec, __invocationSpec);
-        })
-
-        it('callers with different TENANTs get separate registries', async function() {
-            await middleware({ caller: caller('TEST:ONE'), deps: this.deps, context: {} }, resume);
+        it('events with different TENANTs get separate registries', async function() {
+            await middleware(event('TEST:ONE', this.deps), resume);
             const one = resumed.deps.resolveSingle('types');
 
-            await middleware({ caller: caller('TEST:TWO'), deps: this.deps, context: {} }, resume);
+            await middleware(event('TEST:TWO', this.deps), resume);
             const two = resumed.deps.resolveSingle('types');
 
             assert.strictEqual(one.name(TYPE), `TEST:ONE::${TYPE}`);
             assert.strictEqual(two.name(TYPE), `TEST:TWO::${TYPE}`);
         })
 
-        it('reuses deps already namespaced by the same TENANT (nested dispatch)', async function() {
-            await middleware({ caller: caller('TEST:TENANT'), deps: this.deps, context: {} }, resume);
-            const outer = resumed;
+        it('nested event with the same TENANT inherits the outer types', async function() {
+            const outer = event('TEST:TENANT', this.deps);
+            await middleware(outer, resume);
 
-            await middleware({ caller: caller('TEST:TENANT'), deps: outer.deps, context: {} }, resume);
+            const nested = event('TEST:TENANT', outer.deps);
+            await middleware(nested, resume);
 
-            assert.strictEqual(resumed.deps, outer.deps);
+            assert.strictEqual(nested.deps.find('types', false), undefined);
+            assert.strictEqual(nested.deps.resolveSingle('types'), outer.deps.resolveSingle('types'));
         })
 
-        it('re-namespaces deps namespaced by a different TENANT', async function() {
-            await middleware({ caller: caller('TEST:ONE'), deps: this.deps, context: {} }, resume);
-            const outer = resumed;
+        it('nested event with a different TENANT is re-namespaced', async function() {
+            const outer = event('TEST:ONE', this.deps);
+            await middleware(outer, resume);
 
-            await middleware({ caller: caller('TEST:TWO'), deps: outer.deps, context: {} }, resume);
+            const nested = event('TEST:TWO', outer.deps);
+            await middleware(nested, resume);
 
-            assert.strictEqual(resumed.deps.resolveSingle('types').name(TYPE), `TEST:TWO::${TYPE}`);
+            assert.strictEqual(nested.deps.resolveSingle('types').name(TYPE), `TEST:TWO::${TYPE}`);
             assert.strictEqual(outer.deps.resolveSingle('types').name(TYPE), `TEST:ONE::${TYPE}`);
         })
 
         it('rejects a non-string namespace id', async function() {
             const m = typesMiddleware('TENANT', () => 123);
 
-            await assert.rejects(m({ caller: caller('TEST:TENANT'), deps: this.deps, context: {} }, resume), /must be a string/);
+            await assert.rejects(m(event('TEST:TENANT', this.deps), resume), /must be a string/);
         })
     })
 
     describe('passes the event through unchanged', function() {
         it('without a caller', async function() {
-            const event = { deps: this.deps, context: {} };
+            const e = { deps: this.deps.branch(), context: {} };
 
-            await middleware(event, resume);
+            await middleware(e, resume);
 
-            assert.strictEqual(resumed, event);
+            assert.strictEqual(resumed, e);
+            assert.strictEqual(e.deps.find('types', false), undefined);
         })
 
         it('with a caller without a TENANT', async function() {
-            const event = { caller: caller(undefined), deps: this.deps, context: {} };
+            const e = event(undefined, this.deps);
 
-            await middleware(event, resume);
+            await middleware(e, resume);
 
-            assert.strictEqual(resumed, event);
+            assert.strictEqual(resumed, e);
+            assert.strictEqual(e.deps.find('types', false), undefined);
         })
 
         it('without a types registry', async function() {
             const deps = {
                 resolveSingle: () => undefined,
-                branch: () => assert.fail('should not branch')
+                define: () => assert.fail('should not define types')
             };
-            const event = { caller: caller('TEST:TENANT'), deps, context: {} };
+            const e = { caller: caller('TEST:TENANT'), deps, context: {} };
 
-            await middleware(event, resume);
+            await middleware(e, resume);
 
-            assert.strictEqual(resumed, event);
+            assert.strictEqual(resumed, e);
         })
     })
 
