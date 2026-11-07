@@ -12,18 +12,12 @@ exports.__metadata = {
                 tenantId: 'string'
             }
         },
-        api: {
-            params: {
-                tenantId: 'string'
-            }
-        }
+        api: {}
     }
 }
 
 /**
  * NOTE: application (context) namespaces the type; otherwise the registered (APPLICATION) namespace is used
- *
- * WIP: api returns MEMBERs of any TENANT; should this be limited to the caller's TENANT?
  */
 async function fetchMembers(tenantId, application, deps) {
     const { logger, store } = deps.resolve('logger', 'store');
@@ -47,13 +41,16 @@ exports.effect = async function({ params={}, context={}, deps }) {
     return fetchMembers(tenantId, context.application, deps);
 }
 
-exports.api = async function({ params={}, deps }) {
+/**
+ * NOTE: api returns the MEMBERs of the caller's (session) TENANT only
+ */
+exports.api = async function({ caller, deps }) {
     const { logger } = deps.resolve('logger');
 
     logger.info('executing api (name="web.members")');
 
-    const { tenantId } = params;
-    assert(tenantId, 'tenantId is required');
+    const tenantId = caller?.snapshotAttribute('tenantId');
+    assert(tenantId, 'caller tenantId is required');
 
     return fetchMembers(tenantId, undefined, deps);
 }

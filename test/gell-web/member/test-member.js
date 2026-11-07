@@ -17,6 +17,9 @@ const update = require('../../../gell-web/member/event/update');
 const lookup = require('../../../gell-web/member/snapshot/member');
 const members = require('../../../gell-web/member/snapshot/members');
 const memberships = require('../../../gell-web/member/snapshot/memberships');
+const add = require('../../../gell-web/member/event/add');
+
+const browser = require('../../../gell-web/domain/browser');
 
 const APPLICATION_ID = 'UNITTEST:ADMIN';
 const MEMBER_TYPE = `${APPLICATION_ID}::WEB#MEMBER`;
@@ -235,6 +238,76 @@ describe('MEMBER', function() {
             const members$ = await members.effect({ params: { tenantId: 'UNITTEST:BLUEHOUR' }, deps: this.deps });
 
             assert.deepStrictEqual(_.map(members$, 'userId').sort(), ['one@test.com', 'two@test.com']);
+        })
+
+        it('api returns MEMBERs of the caller\'s TENANT only', async function() {
+            await this.createMember('one@test.com', 'administrator', bluehour);
+            await this.createMember('three@test.com', 'user', peaktravel);
+
+            const caller = browser.materialize({ userId: 'one@test.com', tenantId: 'UNITTEST:PEAKTRAVEL', role: 'user' });
+
+            // NOTE: a tenantId param is ignored
+            const members$ = await members.api({ params: { tenantId: 'UNITTEST:BLUEHOUR' }, caller, deps: this.deps });
+
+            assert.deepStrictEqual(_.map(members$, 'userId'), ['three@test.com']);
+        })
+
+        it('api requires a caller TENANT', async function() {
+            const caller = browser.materialize({ userId: 'one@test.com' });
+
+            await assert.rejects(members.api({ caller, deps: this.deps }), /caller tenantId is required/);
+        })
+    })
+
+    describe('web.member.add', function() {
+        let caller;
+
+        beforeEach(async function() {
+            await store.save(application.materialize({ id: APPLICATION_ID, name: 'Unit Test Admin' }));
+
+            caller = browser.materialize({ userId: 'admin@test.com', tenantId: 'UNITTEST:BLUEHOUR', role: 'administrator' });
+
+            this.addMember = async function(email, role='user') {
+                const $txn = store.write();
+
+                const member_ = await add.action({ params: { email, role }, context: { $txn }, caller, deps: this.deps });
+
+                await $txn.return().value;
+
+                return member_;
+            }
+        })
+
+        it('creates the USER and its MEMBER in the caller\'s TENANT', async function() {
+            const member_ = await this.addMember('New@Test.com');
+
+            const [member$] = store.select({ id: member_.get('id') });
+            assert.strictEqual(member$.type, MEMBER_TYPE);
+            assert.strictEqual(member$.parentId, 'UNITTEST:BLUEHOUR');
+            assert.strictEqual(member$.userId, 'new@test.com');
+            assert.strictEqual(member$.role, 'user');
+
+            const users$ = store.select({ userId: 'new@test.com', parentId: APPLICATION_ID });
+            assert.strictEqual(users$.length, 1);
+        })
+
+        it('reuses an existing USER', async function() {
+            await this.addMember('user@test.com');
+
+            caller.set('tenantId', 'UNITTEST:PEAKTRAVEL');
+            await this.addMember('user@test.com', 'administrator');
+
+            const users$ = store.select({ userId: 'user@test.com', parentId: APPLICATION_ID });
+            assert.strictEqual(users$.length, 1);
+
+            const members$ = await memberships.effect({ params: { userId: 'user@test.com' }, deps: this.deps });
+            assert.strictEqual(members$.length, 2);
+        })
+
+        it('rejects a duplicate MEMBER', async function() {
+            await this.addMember('user@test.com');
+
+            await assert.rejects(this.addMember('user@test.com'), /member already exists/);
         })
     })
 

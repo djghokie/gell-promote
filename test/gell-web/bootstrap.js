@@ -12,10 +12,12 @@ const { Types } = require('../../gell-discover/domain/types');
 const webQueries = require('../../gell-web/dynamodb/queries');
 
 const application = require('../../gell-namespace/domain/application');
+const tenant = require('../../gell-namespace/domain/tenant');
 const member = require('../../gell-web/member/domain/member');
 
 function setupTypes(deps) {
     const types = new Types();
+    types.register(tenant.TYPE, tenant.model);
     types.register(application.TYPE, application.model);
     types.register(user.TYPE, user.model);
     types.register(member.TYPE, member.model, 'APPLICATION');
