@@ -5,6 +5,8 @@ const runtime = require('gell-runtime/mocha');
 
 const bootstrap = require('../bootstrap');
 
+const tenant = require('../../../gell-namespace/domain/tenant');
+
 const auth = require('../../../gell-auth/action/auth-newuser');
 
 describe('newuser auth action', function() {
@@ -14,74 +16,67 @@ describe('newuser auth action', function() {
     let store;
     let application;
 
-    beforeEach(function() {
+    beforeEach(async function() {
         store = this.deps.resolveSingle('store');
 
         application = {
             id: 'UNITTEST:WEB'
         }
+
+        await store.save(tenant.materialize({ id: 'UNITTEST:BLUEHOUR', name: 'Blue Hour' }));
+    })
+
+    beforeEach(function() {
+        this.authenticate = async function(credentials) {
+            return auth.effect({
+                params: credentials,
+                context: {
+                    application
+                },
+                deps: this.deps
+            });
+        }
     })
 
     describe('effect', function() {
-        let credentials;
+        it('returns user if successful', async function() {
+            const user$ = await this.authenticate({ userId: 'user@test.com', role: 'admin', tenantId: 'UNITTEST:BLUEHOUR' });
 
-        beforeEach(function() {
-            credentials = {
-                userId: '123',
-                email: 'user@#test.com'
-            };
+            assert.strictEqual(user$.userId, 'user@test.com');
+            // NOTE: USERs don't hold roles; the role belongs to a MEMBER
+            assert.strictEqual(user$.roles, undefined);
         })
 
-        describe('non-namespaced user', function() {
-            beforeEach(function() {
-            })
-        
-            it('returns user if successful', async function() {
-                const userId = 'user@test.com';
-    
-                credentials = {
-                    userId,
-                    role: 'operator'
-                };
-    
-                const user$ = await auth.effect({
-                    params: credentials,
-                    context: {
-                        application
-                    },
-                    deps: this.deps
-                });
-    
-                assert.strictEqual(user$.userId, userId);
-            })
+        it('saves user scoped to the application', async function() {
+            const user$ = await this.authenticate({ userId: 'user@test.com', role: 'admin', tenantId: 'UNITTEST:BLUEHOUR' });
+
+            const [saved$] = store.select({ id: user$.id });
+
+            assert.strictEqual(saved$.type, 'UNITTEST:WEB::WEB#USER');
+            assert.strictEqual(saved$.parentId, 'UNITTEST:WEB');
         })
 
-        describe('namespaced user', function() {
-            beforeEach(function() {
-            })
-        
-            it('returns user if successful', async function() {
-                const userId = 'user@test.com';
-    
-                credentials = {
-                    userId,
-                    role: 'admin'
-                };
-    
-                // console.debug('#####', existing_);
-    
-                const user$ = await auth.effect({
-                    params: credentials,
-                    context: {
-                        application
-                    },
-                    deps: this.deps
-                });
+        it('saves MEMBER of the tenant with the role', async function() {
+            await this.authenticate({ userId: 'user@test.com', role: 'admin', tenantId: 'UNITTEST:BLUEHOUR' });
 
-                assert.strictEqual(user$.userId, userId);
-                // NOTE: USERs don't hold roles; the role belongs to a MEMBER
-                assert.strictEqual(user$.roles, undefined);
-            })
+            const [member$] = store.select({ type: 'UNITTEST:WEB::WEB#MEMBER' });
+
+            assert.strictEqual(member$.userId, 'user@test.com');
+            assert.strictEqual(member$.parentId, 'UNITTEST:BLUEHOUR');
+            assert.strictEqual(member$.role, 'admin');
+        })
+
+        it('returns nothing (and saves nothing) if the tenant does not exist', async function() {
+            const user$ = await this.authenticate({ userId: 'user@test.com', role: 'admin', tenantId: 'UNITTEST:MISSING' });
+
+            assert.strictEqual(user$, undefined);
+            assert.strictEqual(store.select({ userId: 'user@test.com' }).length, 0);
+        })
+
+        it('returns nothing without a tenant', async function() {
+            const user$ = await this.authenticate({ userId: 'user@test.com', role: 'admin' });
+
+            assert.strictEqual(user$, undefined);
         })
     })
 })

@@ -20,9 +20,10 @@ export default function() {
         // console.debug('##### session', session, user, token);
 
         if (token) {
-            const { sub, firstName, lastName, email, role } = token;
+            const { sub, firstName, lastName, email, role, tenantId } = token;
 
             if (sub) session.user.id = sub;
+            if (tenantId) session.tenantId = tenantId;
             if (firstName) session.user.firstName = firstName;
             if (lastName) session.user.lastName = lastName;
             if (email) session.user.email = email;

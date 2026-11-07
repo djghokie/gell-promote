@@ -5,6 +5,10 @@ const { State } = require('gell');
 
 const { getServerSession } = require("next-auth");
 
+/**
+ * NOTE: tenantUrl is optional; when set, a session without a selected TENANT (session.tenantId) is redirected there
+ * instead of unauthorizedUrl
+ */
 const DEFAULT_OPTIONS = {
     signinUrl: '/api/auth/signin',
     unauthorizedUrl: '/unauthorized'   
@@ -29,7 +33,7 @@ exports.protectedPage = function*(allowedRoles, authOptions, f, options=DEFAULT_
     assert(authOptions);
     assert(options);
 
-    const { unauthorizedUrl, signinUrl } = _.defaults(options, DEFAULT_OPTIONS);
+    const { unauthorizedUrl, signinUrl, tenantUrl } = _.defaults(options, DEFAULT_OPTIONS);
     assert(signinUrl);
     assert(unauthorizedUrl);
 
@@ -43,6 +47,12 @@ exports.protectedPage = function*(allowedRoles, authOptions, f, options=DEFAULT_
         if (!session) {
             return {
                 redirect: { destination: signinUrl, permanent: false },
+            };
+        }
+
+        if (tenantUrl && !session.tenantId) {
+            return {
+                redirect: { destination: tenantUrl, permanent: false },
             };
         }
     

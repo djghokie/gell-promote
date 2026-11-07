@@ -9,7 +9,7 @@ import auth from '../action/auth-newuser';
  * 
  * NOTES
  *  - used in non-production scenarios to sign in as a newly created user
- *  - creates and persists new user on the fly
+ *  - creates and persists new user on the fly, as a MEMBER (with the role) of the TENANT
  *  - could potentially pass in id and/or name as arguments
  */
 export default function newUserProvider(application, deps) {
@@ -28,6 +28,10 @@ export default function newUserProvider(application, deps) {
             },
             role: {
                 label: 'Role',
+                type: 'text'
+            },
+            tenantId: {
+                label: 'Tenant',
                 type: 'text'
             },
         },
