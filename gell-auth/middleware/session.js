@@ -34,6 +34,7 @@ module.exports = function* sessionLoader(authOptions) {
                 userId: session.user.email,
                 user: session.user,
                 role: session.role,
+                tenantId: session.tenantId,
             });
         }
 	}
