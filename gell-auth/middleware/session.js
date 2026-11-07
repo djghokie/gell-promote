@@ -29,14 +29,9 @@ module.exports = function* sessionLoader(authOptions) {
 
         const session = await getServerSession(context.req, context.res, authOptions);
 
-        if (session) {
-            context.session = browser.materialize({
-                userId: session.user.email,
-                user: session.user,
-                role: session.role,
-                tenantId: session.tenantId,
-            });
-        }
+        if (session)
+            // NOTE: the session callback (gell-auth/callback/session) defines the session's fields, including userId
+            context.session = browser.materialize(session);
 	}
 
 	let args = yield { state, conf, events };
