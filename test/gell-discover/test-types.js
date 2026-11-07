@@ -97,6 +97,96 @@ describe('types registy', function() {
 
             assert.strictEqual(name, 'INCUBATOR::UNITTEST#TYPE');
         })
+
+        it('namespaceId argument overrides the registered namespace', function() {
+            types.register(type.TYPE, type.model, 'ECOSYSTEM');
+            types.set('ECOSYSTEM', 'INCUBATOR');
+
+            const name = types.name(type.TYPE, 'OTHER');
+
+            assert.strictEqual(name, 'OTHER::UNITTEST#TYPE');
+        })
+
+        it('namespaceId argument applies to a non-namespaced type', function() {
+            types.register(type.TYPE, type.model);
+
+            assert.strictEqual(types.name(type.TYPE, 'OTHER'), 'OTHER::UNITTEST#TYPE');
+        })
+
+        it('requires a string name', function() {
+            assert.throws(() => types.name(), /name argument must be string/);
+        })
+
+        it('throws exception if no type with name defined', function() {
+            assert.throws(() => types.name('UNITTEST#MISSING'), /type \(name=UNITTEST#MISSING\) is not defined/);
+        })
+
+        it('throws exception if namespace not defined', function() {
+            types.register(type.TYPE, type.model, 'TENANT');
+
+            assert.throws(() => types.name(type.TYPE), /namespace \(name=TENANT\) is not defined/);
+        })
+    })
+
+    describe('register', function() {
+        it('requires a string name', function() {
+            assert.throws(() => types.register(undefined, type.model));
+        })
+
+        it('requires a model', function() {
+            assert.throws(() => types.register(type.TYPE));
+        })
+
+        it('requires a string namespace', function() {
+            assert.throws(() => types.register(type.TYPE, type.model, {}));
+        })
+
+        it('re-registering a name replaces the model', function() {
+            types.register('FOO', type.model);
+            types.register('FOO', session.model);
+
+            assert.strictEqual(types.get('FOO'), session.model);
+            assert.strictEqual(Array.from(types.names()).length, 1);
+        })
+    })
+
+    describe('clone', function() {
+        beforeEach(function() {
+            types.register(type.TYPE, type.model, 'APPLICATION');
+            types.set('APPLICATION', 'INCUBATOR:WEB');
+        })
+
+        it('keeps registered types and namespaces', function() {
+            const clone = types.clone();
+
+            assert(clone instanceof Types);
+            assert.strictEqual(clone.name(type.TYPE), 'INCUBATOR:WEB::UNITTEST#TYPE');
+        })
+
+        it('namespace changes do not carry back to the original', function() {
+            const clone = types.clone();
+            clone.set('APPLICATION', 'INCUBATOR:ADMIN');
+
+            assert.strictEqual(clone.name(type.TYPE), 'INCUBATOR:ADMIN::UNITTEST#TYPE');
+            assert.strictEqual(types.name(type.TYPE), 'INCUBATOR:WEB::UNITTEST#TYPE');
+        })
+
+        it('types registered on a clone do not carry back to the original', function() {
+            const clone = types.clone();
+            clone.register('BROWSER', session.model, 'TENANT');
+
+            assert(clone.get('BROWSER'));
+            assert.strictEqual(types.get('BROWSER'), undefined);
+            assert.strictEqual(types.namespacedTypes.BROWSER, undefined);
+        })
+
+        /**
+         * NOTE: namespaces are stored as state attributes, so they show up alongside type names
+         *  - documents the open gell-discover TODO ("namespace should not be stored as attribute")
+         */
+        it('namespaces are listed with type names', function() {
+            assert.deepStrictEqual(Array.from(types.names()), [type.TYPE, 'APPLICATION']);
+        })
     })
 
     /**
@@ -108,12 +198,12 @@ describe('types registy', function() {
             types.set('APPLICATION', 'INCUBATOR:WEB');
         })
     
-        it.skip('fails if no name provided', function() {
-            assert.fail('should fail');
+        it('fails if no name provided', function() {
+            assert.throws(() => types.instance(), /name argument must be string/);
         })
 
-        it.skip('throws exception if no type with name defined', function() {
-            assert.fail('should fail');
+        it('throws exception if no type with name defined', function() {
+            assert.throws(() => types.instance('UNITTEST#MISSING'), /no type \(name=UNITTEST#MISSING\) defined/);
         })
 
         it('simple instance', function() {
@@ -155,8 +245,10 @@ describe('types registy', function() {
             assert.strictEqual(instance$.id, '123');
         })
 
-        it.skip('throws exception if namespace not defined', function() {
-            assert.fail('should fail');
+        it('throws exception if namespace not defined', function() {
+            types.register(type.TYPE, type.model, 'TENANT');
+
+            assert.throws(() => types.instance(type.TYPE), /namespace \(name=TENANT\) is not defined/);
         })
 
         it('namespaced instance', function() {
