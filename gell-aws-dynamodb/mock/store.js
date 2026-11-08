@@ -11,4 +11,9 @@ module.exports = class extends Store {
         Object.assign(this.writeOptions.namedOperations, operationWrapper.ut(...operations));
     }
 
+    clear() {
+        this.saved.length = 0;
+        this.remove('lastSaved');
+    }
+
 }
