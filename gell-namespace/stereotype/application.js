@@ -1,4 +1,5 @@
 const namespace = require('./namespace');
+const ecosystem = require('../domain/ecosystem');
 
 const TYPE = 'NAMESPACE#APPLICATION';
 
@@ -13,7 +14,18 @@ module.exports = {
     name: 'APPLICATION',
     extends: namespace,
 
-    TYPE,
+    types: {
+        'GELL#NAMESPACE': {
+            name: 'NAMESPACE#APPLICATION',
+            parent: ecosystem,
+            attributes: {
+                type: {
+                    type: 'string',
+                    default: 'NAMESPACE#APPLICATION'
+                },
+            }
+        }
+    },
 
     // NOTE: the namespace middleware puts the ECOSYSTEM in context.ecosystem_
     parentContext: 'ecosystem_',

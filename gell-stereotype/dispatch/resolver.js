@@ -3,6 +3,8 @@ const _ = require('lodash');
 
 const { State } = require('gell');
 
+const { basesOf } = require('../util/extension');
+
 /**
  * Separates an extension name from an inherited event name in a stereotyped route:
  *      APPLICATION$namespace.create#action
@@ -11,19 +13,6 @@ const { State } = require('gell');
  * is unused in gell names and never encoded in URLs (APPLICATION~namespace.create#action)
  */
 const DELIMITER = '$';
-
-/**
- * Returns the stereotypes def extends (none, one, or many), resolving stereotype names through the registry
- */
-function basesOf(def, stereotypes) {
-    const { extends: xtends } = def;
-
-    if (!xtends) return [];
-
-    return (_.isArray(xtends) ? xtends : [xtends])
-        .map(base => _.isString(base) ? stereotypes.get(base) : base)
-        .filter(Boolean);
-}
 
 /**
  * Finds an event module declared by def (an extension or stereotype) in its catalog ("actions" or "snapshots")

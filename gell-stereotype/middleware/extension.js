@@ -4,7 +4,10 @@ const format = require('gell/state/format');
 
 const ErrorState = require('../../gell/error');
 
+const { resolveType } = require('../util/extension');
+
 const MESSAGE_EXTENSION_REQUIRED = 'call to event trigger (route="%s") must be dispatched for an extension (e.g. EXTENSION$%s)';
+const MESSAGE_EXTENSION_TYPE = 'extension (name="%s") does not extend type (name="%s") for event trigger (route="%s")';
 const MESSAGE_EXTENSION_ATTRIBUTE = 'extension (name="%s") does not provide required attribute (name="%s") for event trigger (route="%s")';
 const MESSAGE_EXTENSION_ATTRIBUTE_TYPE = 'extension (name="%s") has attribute (name="%s") that is not of type (type="%s") for event trigger (route="%s")';
 
@@ -21,26 +24,34 @@ function fail(name, attributes, message, ...keys) {
 /**
  * gell-dispatch middleware for stereotyped events (EXTENSION$stereotype.event#trigger, see dispatch/resolver)
  *  - puts the extension, and the stereotype that declared the event, in context.extension and context.stereotype
- *  - validates the extension against the trigger's extension spec, the attributes the extension must provide:
+ *  - resolves the extension's types for the stereotype types the trigger operates on into context.extensionTypes,
+ *    keyed by stereotype type name: { 'GELL#NAMESPACE': { name: 'NAMESPACE#APPLICATION', model } }
+ *  - validates the extension against the trigger's extension spec:
  *
  *      triggers: {
  *          action: {
  *              params: { ... },
  *              extension: {
- *                  TYPE: { type: 'string' },
- *                  parentContext: { type: 'string', optional: true },
+ *                  // stereotype types the extension must extend (see domain/extension)
+ *                  types: ['GELL#NAMESPACE'],
+ *                  // configuration attributes the extension provides
+ *                  attributes: {
+ *                      parentContext: { type: 'string', optional: true },
+ *                  },
  *              },
  *          }
  *      }
  *
  * A trigger that declares an extension spec can only be dispatched as a stereotyped event, so its handler can rely
- * on context.extension
+ * on context.extension and context.extensionTypes
  *
  * NOTE: the context is copied, so the caller's context object is not modified
  *
  * NOTE: runs before the attributes middleware, so context specs can require extension and stereotype
  *
  * WIP: type checks support 'string' only, like the arguments middleware
+ *
+ * WIP: extension types are resolved on every invocation; cache them per extension if this becomes hot
  */
 module.exports = function(event, resume) {
     const { __invocationSpec } = event;
@@ -57,8 +68,25 @@ module.exports = function(event, resume) {
 
     if (!extension) return resume(event);
 
-    Object.keys(spec || {}).forEach(n => {
-        const attr = spec[n] || {};
+    const { types: typeNames=[], attributes: attributeSpecs={} } = spec || {};
+
+    const stereotypes = event.deps && event.deps.resolveSingle({ name: 'stereotypes', optional: true });
+
+    const extensionTypes = {};
+
+    typeNames.forEach(typeName => {
+        const type = resolveType(extension, typeName, stereotypes);
+
+        if (!type || type.abstract) {
+            fail('ExtensionTypeError', { route, extension: extension.name, typeName }, MESSAGE_EXTENSION_TYPE,
+                'extension', 'typeName', 'route');
+        }
+
+        extensionTypes[typeName] = { name: type.name, model: type.model };
+    });
+
+    Object.keys(attributeSpecs).forEach(n => {
+        const attr = attributeSpecs[n] || {};
         const val = extension[n];
         const attributes = { route, eventName, extension: extension.name, attribute: n };
 
@@ -80,6 +108,7 @@ module.exports = function(event, resume) {
             ...event.context,
             extension,
             stereotype,
+            extensionTypes,
         }
     });
 }

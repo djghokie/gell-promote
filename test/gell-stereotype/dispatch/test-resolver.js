@@ -34,23 +34,31 @@ const LIST = {
     __metadata: {
         name: 'things.all',
         triggers: {
-            api: { params: {} }
+            api: {
+                params: {},
+                extension: { types: ['UNITTEST#THING'] },
+            }
         }
     },
     api: async function({ context }) {
-        return { type: context.extension.TYPE };
+        return { type: context.extensionTypes['UNITTEST#THING'].name };
     }
 }
 
 const THING = {
     name: 'thing',
+    types: {
+        'UNITTEST#THING': { model: { attributes: { name: { type: 'string' } } } },
+    },
     actions: [CREATE],
     snapshots: [LIST],
 }
 
 const WIDGET = {
     name: 'WIDGET',
-    TYPE: 'UNITTEST#WIDGET',
+    types: {
+        'UNITTEST#THING': { name: 'UNITTEST#WIDGET' },
+    },
     extends: THING,
 }
 

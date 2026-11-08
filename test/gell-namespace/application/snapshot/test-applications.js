@@ -24,7 +24,6 @@ describe('applications snapshot', function() {
     beforeEach(function() {
         this.create = async function(name, relativeId) {
             return this.action({
-                // route: 'namespace.application.create#action',
                 route: 'APPLICATION$namespace.create#action',
                 params: {
                     name,
@@ -38,7 +37,6 @@ describe('applications snapshot', function() {
 
         this.applications = async function() {
             return this.snapshot({
-                // route: 'namespace.applications.active#api',
                 route: 'APPLICATION$namespaces.active#api',
             });
         }

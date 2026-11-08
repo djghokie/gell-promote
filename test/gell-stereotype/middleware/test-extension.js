@@ -2,8 +2,15 @@ const assert = require('assert');
 
 const middleware = require('../../../gell-stereotype/middleware/extension');
 
-const THING = { name: 'thing' };
-const WIDGET = { name: 'WIDGET', TYPE: 'UNITTEST#WIDGET', extends: THING };
+const THING_MODEL = { attributes: { name: { type: 'string' } } };
+
+const THING = { name: 'thing', types: { 'UNITTEST#THING': { model: THING_MODEL } } };
+const WIDGET = {
+    name: 'WIDGET',
+    extends: THING,
+    types: { 'UNITTEST#THING': { name: 'UNITTEST#WIDGET' } },
+    parentContext: 'parent_',
+};
 
 describe('gell-stereotype/middleware/extension', function() {
     let event, resumed;
@@ -55,6 +62,7 @@ describe('gell-stereotype/middleware/extension', function() {
 
         assert.strictEqual(resumed.context.extension, WIDGET);
         assert.strictEqual(resumed.context.stereotype, THING);
+        assert.deepStrictEqual(resumed.context.extensionTypes, {});
         assert.strictEqual(resumed.context.other, 1);
         assert.strictEqual(resumed.__invocationSpec, event.__invocationSpec);
     })
@@ -68,7 +76,7 @@ describe('gell-stereotype/middleware/extension', function() {
     })
 
     it('fails when a trigger with an extension spec is not dispatched for an extension', function() {
-        event = invocation({ spec: { TYPE: { type: 'string' } } });
+        event = invocation({ spec: { types: ['UNITTEST#THING'] } });
 
         assert.throws(() => middleware(event, resume), e => {
             assert.strictEqual(e.name, 'ExtensionRequiredError');
@@ -80,39 +88,81 @@ describe('gell-stereotype/middleware/extension', function() {
         assert(!resumed);
     })
 
-    it('fails when the extension does not provide a required attribute', function() {
-        event = invocation({ extension: { name: 'GADGET' }, stereotype: THING, spec: { TYPE: {} } });
+    describe('types', function() {
+        it('resolves the extension types in context', function() {
+            event = invocation({ extension: WIDGET, stereotype: THING, spec: { types: ['UNITTEST#THING'] } });
 
-        assert.throws(() => middleware(event, resume), e => {
-            assert.strictEqual(e.name, 'ExtensionAttributeError');
-            assert.strictEqual(e.extension, 'GADGET');
-            assert.strictEqual(e.attribute, 'TYPE');
+            middleware(event, resume);
 
-            return true;
-        });
-        assert(!resumed);
+            const { name, model } = resumed.context.extensionTypes['UNITTEST#THING'];
+
+            assert.strictEqual(name, 'UNITTEST#WIDGET');
+            assert.deepStrictEqual(model.extends, [THING_MODEL]);
+        })
+
+        it('fails when the extension does not extend a required type', function() {
+            const GADGET = { name: 'GADGET', extends: THING };
+
+            event = invocation({ extension: GADGET, stereotype: THING, spec: { types: ['UNITTEST#THING'] } });
+
+            assert.throws(() => middleware(event, resume), e => {
+                assert.strictEqual(e.name, 'ExtensionTypeError');
+                assert.strictEqual(e.extension, 'GADGET');
+                assert.strictEqual(e.typeName, 'UNITTEST#THING');
+                assert.strictEqual(e.message,
+                    'extension (name="GADGET") does not extend type (name="UNITTEST#THING") for event trigger (route="GADGET$thing.create#action")');
+
+                return true;
+            });
+            assert(!resumed);
+        })
+
+        it('fails when no stereotype declares a required type', function() {
+            event = invocation({ extension: WIDGET, stereotype: THING, spec: { types: ['UNITTEST#OTHER'] } });
+
+            assert.throws(() => middleware(event, resume), { name: 'ExtensionTypeError' });
+        })
     })
 
-    it('fails when an extension attribute is not of the declared type', function() {
-        event = invocation({ extension: { ...WIDGET, TYPE: 7 }, stereotype: THING, spec: { TYPE: { type: 'string' } } });
+    describe('attributes', function() {
+        it('fails when the extension does not provide a required attribute', function() {
+            event = invocation({ extension: WIDGET, stereotype: THING, spec: { attributes: { config: {} } } });
 
-        assert.throws(() => middleware(event, resume), e => {
-            assert.strictEqual(e.name, 'ExtensionAttributeError');
-            assert.strictEqual(e.type, 'string');
+            assert.throws(() => middleware(event, resume), e => {
+                assert.strictEqual(e.name, 'ExtensionAttributeError');
+                assert.strictEqual(e.extension, 'WIDGET');
+                assert.strictEqual(e.attribute, 'config');
 
-            return true;
-        });
-    })
+                return true;
+            });
+            assert(!resumed);
+        })
 
-    it('accepts an extension that omits optional attributes', function() {
-        event = invocation({
-            extension: WIDGET,
-            stereotype: THING,
-            spec: { TYPE: { type: 'string' }, parentContext: { type: 'string', optional: true } },
-        });
+        it('fails when an extension attribute is not of the declared type', function() {
+            event = invocation({
+                extension: { ...WIDGET, parentContext: 7 },
+                stereotype: THING,
+                spec: { attributes: { parentContext: { type: 'string' } } },
+            });
 
-        middleware(event, resume);
+            assert.throws(() => middleware(event, resume), e => {
+                assert.strictEqual(e.name, 'ExtensionAttributeError');
+                assert.strictEqual(e.type, 'string');
 
-        assert.strictEqual(resumed.context.extension, WIDGET);
+                return true;
+            });
+        })
+
+        it('accepts an extension that omits optional attributes', function() {
+            event = invocation({
+                extension: { ...WIDGET, parentContext: undefined },
+                stereotype: THING,
+                spec: { attributes: { parentContext: { type: 'string', optional: true } } },
+            });
+
+            middleware(event, resume);
+
+            assert(resumed.context.extension);
+        })
     })
 })
