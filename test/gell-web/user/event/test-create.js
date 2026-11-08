@@ -10,9 +10,9 @@ const browser = require('gell-web/domain/browser');
 const ecosystem = require('../../../../gell-namespace/domain/ecosystem');
 const application = require('../../../../gell-namespace/domain/application');
 const createApplication = require('../../../../gell-namespace/action/create');
-const user = require('../../../../gell-web/user/event/create-alt');
+const user = require('../../../../gell-web/user/event/create');
 
-describe('create user (alt)', function() {
+describe('create user', function() {
     before(runtime.beforeAll);
     beforeEach(bootstrap.beforeEach);
 

@@ -8,7 +8,7 @@ const bootstrap = require('../bootstrap');
 const user = require('gell-web/domain/user');
 
 const tenant = require('../../../gell-namespace/domain/tenant');
-const userCreate = require('../../../gell-web/user/event/create-alt');
+const userCreate = require('../../../gell-web/user/event/create');
 const memberCreate = require('../../../gell-web/member/event/create');
 const jwt = require('../../../gell-auth/callback/jwt');
 

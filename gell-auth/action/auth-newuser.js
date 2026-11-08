@@ -1,7 +1,7 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const user = require('../../gell-web/user/event/create-alt');
+const user = require('../../gell-web/user/event/create');
 const member = require('../../gell-web/member/event/create');
 
 const tenant = require('../../gell-namespace/domain/tenant');
@@ -33,7 +33,7 @@ exports.__metadata = {
 /**
  * Creates the USER (scoped to the APPLICATION) and its MEMBER (the role) in the TENANT, in one transaction
  *
- * NOTE: web.user.create.alt checks for duplicate user/application combos
+ * NOTE: web.user.create checks for duplicate user/application combos
  * NOTE: the TENANT is only the new USER's first TENANT; it is selected after sign in, like any other sign in
  *
  * @param {*} userId

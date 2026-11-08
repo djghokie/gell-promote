@@ -5,7 +5,7 @@ const runtime = require('gell-runtime/mocha');
 
 const bootstrap = require('../bootstrap');
 
-const userCreate = require('../../../gell-web/user/event/create-alt');
+const userCreate = require('../../../gell-web/user/event/create');
 const signin = require('../../../gell-auth/callback/signin');
 
 describe('signIn callback', function() {

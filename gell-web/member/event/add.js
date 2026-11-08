@@ -5,7 +5,7 @@ const application = require('../../../gell-namespace/domain/application');
 const tenant = require('../../../gell-namespace/domain/tenant');
 const namespace = require('../../../gell-namespace/snapshot/namespace');
 
-const userCreate = require('../../user/event/create-alt');
+const userCreate = require('../../user/event/create');
 const userLookup = require('../../user/snapshot/user-alt');
 
 const memberCreate = require('./create');

@@ -5,7 +5,7 @@ const runtime = require('gell-runtime/mocha');
 
 const bootstrap = require('../bootstrap');
 
-const createUser = require('../../../gell-web/user/event/create-alt');
+const createUser = require('../../../gell-web/user/event/create');
 const auth = require('../../../gell-auth/action/auth-passwordless');
 
 describe('passwordless auth action', function() {
