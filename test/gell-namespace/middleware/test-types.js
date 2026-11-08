@@ -2,7 +2,7 @@ const assert = require('assert');
 const _ = require('lodash');
 
 const { init } = require('gell/future');
-const runtime = require('gell-runtime/mocha');
+const runtime = require('../../../gell-runtime/mocha');
 const resolver = require('gell-session/dispatch/resolver');
 
 const bus = require('../../../gell-dispatch/bus');

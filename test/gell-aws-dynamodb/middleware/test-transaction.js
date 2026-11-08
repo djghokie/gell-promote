@@ -3,7 +3,7 @@ const _ = require('lodash');
 
 const init = require('gell/future/init');
 
-const runtime = require('gell-runtime/mocha');
+const runtime = require('../../../gell-runtime/mocha');
 
 const resolver = require('gell-session/dispatch/resolver');
 

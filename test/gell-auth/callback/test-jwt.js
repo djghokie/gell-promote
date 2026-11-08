@@ -1,7 +1,7 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const runtime = require('gell-runtime/mocha');
+const runtime = require('../../../gell-runtime/mocha');
 
 const bootstrap = require('../bootstrap');
 

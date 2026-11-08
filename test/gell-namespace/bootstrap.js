@@ -1,3 +1,5 @@
+const discover = require('gell-promote/gell-discover/node');
+
 const sessionQueries = require('gell-session/dynamodb/queries');
 const activeQueries = require('gell-session/dynamodb/active/queries');
 const activityQueries = require('gell-session/dynamodb/activity/queries');
@@ -18,6 +20,17 @@ function setupTypes(deps) {
     deps.define("types", types);
 }
 
+function configureEvents(deps) {
+    const registry_ = discover([
+        `${__dirname}/../../gell-namespace`,
+    ]);
+
+    this.deps.define('registry', registry_);
+
+    // NOTE: action modules go on $bus, api modules on $snapshots (see gell-runtime/mocha)
+    this.register(registry_);
+}
+
 function setupStore(deps) {
     const store = new MockStore();
     Object.assign(store.namedQueries,
@@ -32,6 +45,8 @@ function setupStore(deps) {
 
 exports.beforeEach = function() {
     setupTypes(this.deps);
+
+    configureEvents.bind(this)();
 
     setupStore(this.deps);
 }

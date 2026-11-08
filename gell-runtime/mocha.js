@@ -1,0 +1,98 @@
+const _ = require('lodash');
+
+const { init } = require('gell/future');
+
+const DependencyContainer = require('gell-dependency/container');
+
+const resolver = require('gell-session/dispatch/resolver');
+const { runtimeLogger } = require('gell-runtime/logger');
+
+const bus = require('../gell-dispatch/bus');
+const attributeMiddleware = require('../gell-dispatch/middleware/attributes');
+const argumentMiddleware = require('../gell-dispatch/middleware/arguments');
+const transactionMiddleware = require('../gell-aws-dynamodb/middleware/transaction');
+
+/**
+ * Mocha runtime for unit tests: dispatches events the way a Next.js app's API routes do
+ *
+ * NOTE: re-implementation of gell-runtime/mocha; differences from it, to match the app's buses
+ *  - uses gell-dispatch/bus (each invocation gets its own branch of deps) instead of the legacy gell-session bus
+ *  - runs the app's generic middleware by default (attributes, arguments, transaction, in the app's order); a suite
+ *    adds app specific middleware (e.g. gell-namespace types/namespace) to this.middleware before its first dispatch
+ *  - two catalogs and buses, like the app: this.events (modules exporting action) on $actions, this.snapshots
+ *    (modules exporting api) on $snapshots
+ *  - this.action(trigger) dispatches on $actions and this.snapshot(trigger) on $snapshots; a trigger is a route
+ *    string or { route, caller, params, context, deps } (deps defaults to this.deps)
+ *  - replaces gell-runtime/mocha's this.dispatch, this.event and this.action(caller, params)
+ *
+ * usage
+ *      before(runtime.beforeAll);
+ *      beforeEach(function() { this.register(discover([...])) });
+ *      await this.action({ route: 'namespace.application.create#action', caller, params });
+ *      await this.snapshot({ route: 'namespace.applications.active#api', caller, params });
+ *
+ * WIP: buses are dependency singletons built on first dispatch, so middleware added after it is ignored
+ *
+ * WIP: still differs from the app
+ *  - callers are whatever the test passes, not session State (browser.materialize); no 401/403 authorization
+ *  - results are returned as is, not serialized (result.snapshot() as JSON)
+ *  - params are not serialized (HTTP GET params are strings, plus the router's _event)
+ *  - #effect routes dispatch through $actions, but app code calls effects directly (no bus middleware)
+ */
+exports.MIDDLEWARE = [
+    attributeMiddleware,
+    argumentMiddleware,
+    transactionMiddleware,
+];
+
+exports.beforeAll = function() {
+    const logger = runtimeLogger('unittest');
+    this.logger = logger;
+
+    this.events = {};
+    this.snapshots = {};
+
+    this.middleware = [...exports.MIDDLEWARE];
+
+    const [$actionResolver] = init(resolver.object(this.events));
+    const [$snapshotResolver] = init(resolver.object(this.snapshots));
+
+    this.deps = new DependencyContainer({
+        logger,
+
+        $actions: deps => init(bus($actionResolver, this.middleware, deps))[0],
+        $snapshots: deps => init(bus($snapshotResolver, this.middleware, deps))[0],
+    })
+
+    /**
+     * Registers the modules discovered by gell-discover (registry_.__events and registry_.__snapshots)
+     */
+    this.register = function(registry_) {
+        const { __events: events={}, __snapshots: snapshots={} } = registry_;
+
+        Object.assign(this.events, events);
+        Object.assign(this.snapshots, snapshots);
+    }
+
+    this.action = function(arg) {
+        const trigger = _.isString(arg) ? { route: arg } : { ...arg };
+
+        // NOTE: most tests will branch dependencies in beforeEach
+        if (!trigger.deps) trigger.deps = this.deps;
+
+        const $bus = this.deps.resolveSingle('$actions');
+
+        return $bus.next(trigger).value;
+    }
+
+    this.snapshot = function(arg) {
+        const trigger = _.isString(arg) ? { route: arg } : { ...arg };
+
+        // NOTE: most tests will branch dependencies in beforeEach
+        if (!trigger.deps) trigger.deps = this.deps;
+
+        const $bus = this.deps.resolveSingle('$snapshots');
+
+        return $bus.next(trigger).value;
+    }
+}
