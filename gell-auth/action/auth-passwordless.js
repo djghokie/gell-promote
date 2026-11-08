@@ -1,7 +1,7 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const user = require('../../gell-web/user/snapshot/user-alt');
+const user = require('../../gell-web/user/snapshot/user');
 
 exports.__metadata = {
     name: 'web.user.auth.passwordless',

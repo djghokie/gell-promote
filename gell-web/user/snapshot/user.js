@@ -1,120 +1,107 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const lookup = require('gell-session/snapshot/lookup');
 const user = require('gell-web/domain/user');
-
-const identity = require('../../identity/snapshot/identity');
 
 exports.__metadata = {
     name: 'web.user.lookup',
-    description: 'returns USER associated with an application',
+    description: 'find user by id or userId',
     triggers: {
-        effect: {
-            params: {
-                applicationId: {
-                    type: 'string',
-                    optional: true
-                }
-            },
-            context: {
-                identity_: 'state'
-            }
-        },
+        effect: {},
         api: {
             params: {
-                identityId: 'string',
-                applicationId: {
-                    type: 'string',
+                id: {
+                    type: 'uuid',
                     optional: true
-                }
+                },
+                userId: {
+                    type: 'uuid',
+                    optional: true
+                },
             }
         }
     }
 }
 
-/**
- * Returns the USER of an IDENTITY for an application, or undefined if none
- *  - USER is a child of the IDENTITY (parentId) with type of the application
- *
- * @param {*} identity_
- * @param {*} applicationId
- * @param {*} deps
- */
-async function doLookup(identity_, applicationId, deps) {
-    const { store } = deps.resolve('store');
+async function lookupById(id, deps) {
+    const { logger, store } = deps.resolve('logger', 'store');
+    const types = deps.resolveSingle({ name: 'types', optional: true });
 
-    const identityId = identity_.snapshotAttribute('id');
-    const type = applicationId || user.TYPE;
+    const type = types ? types.name(user.TYPE) : user.TYPE;
 
-    const users$ = await store.drain('session.children', { type, parentId: identityId });
+    logger.info(`looking up user (id=${id}; type=${type})`);
 
-    if (users$.length > 1) throw new Error(`multiple users associated with identity (identityId=${identityId}; applicationId=${applicationId})`);
-    if (users$.length === 1) return user.materialize(users$[0]);
+    const user$ = await store.lookup({ type, id });
 
-    /**
-     * WIP: legacy USERs use the IDENTITY id as their id (no parentId)
-     *  - remove once existing USERs are migrated
-     */
-    return lookup.effect({
-        params: {
-            key: {
-                type,
-                id: identityId
-            }
-        },
-        context: {
-            materialize: user.materialize
-        },
-        deps
-    });
+    if (user$) return user.materialize(user$);
+    else
+        logger.warn(`no user (id=${id}; type=${type}) found`);
 }
 
 /**
- * Returns the USER of the IDENTITY (context) for an application, or undefined if the IDENTITY has no USER
+ * NOTE: USERs are namespaced by their APPLICATION, so the APPLICATION is enough to find a USER
+ *  - used in auth scenarios, where there is no namespaced types registry
+ * 
+ * @param {*} userId 
+ * @param {*} application 
+ * @param {*} deps 
+ * @returns 
  */
+async function lookupByUserId(userId, application, deps) {
+    const { logger, store } = deps.resolve('logger', 'store');
+    const types = deps.resolveSingle({ name: 'types', optional: true });
+
+    assert(application, 'application is required');
+
+    const applicationId = application.id;
+
+    const type = types ? types.name(user.TYPE, applicationId) : user.TYPE;
+
+    logger.info(`looking up user (userId=${userId}; type=${type})`);
+
+    const [user$] = await store.drain('web.user.userId', { type, userId, applicationId });
+
+    if (user$) return user.materialize(user$);
+    else
+        logger.warn(`no user (userId=${userId}; type=${type}) found`);
+}
+
 exports.effect = async function({ params={}, context={}, deps }) {
     const { logger } = deps.resolve('logger');
 
     logger.info('executing effect (name="web.user.lookup")');
 
-    const { applicationId } = params;
-    const { identity_ } = context;
+    const { id, userId } = params;
 
-    assert(identity_, 'identity_ is required');
+    if (id) return lookupById(id, deps);
 
-    return doLookup(identity_, applicationId, deps);
+    const { application } = context;
+    assert(application);
+    
+    if (userId) return lookupByUserId(userId, application, deps);
+
+    throw new Error('either id or userId is required');
 }
 
 /**
- * Returns the USER of an IDENTITY for an application
- *  - an UNAUTHORIZED USER (not persisted) if the IDENTITY does not exist or has no USER for the application
- *
- * WIP: currently using status for user that is not authorized for an application
- *  - could use empty roles instead tho
+ * WIP: lookup by userId needs an APPLICATION in context, which api callers don't provide yet
  */
-exports.api = async function({ params={}, deps }) {
+exports.api = async function({ params={}, context={}, deps }) {
     const { logger } = deps.resolve('logger');
 
     logger.info('executing api (name="web.user.lookup")');
+    
+    const { id, userId } = params;
 
-    const { identityId, applicationId } = params;
+    if (id) {
+        var user_ = await lookupById(id, deps);
+        if (!user_) throw Object.assign(new Error(`user not found (id=${id})`), { status: 404 });
+    }
+    else if (userId) {
+        var user_ = await lookupByUserId(userId, context.application, deps);
+        if (!user_) throw Object.assign(new Error(`user not found (userId=${userId})`), { status: 404 });
+    }
+    else throw new Error('either id or userId is required');
 
-    const identity_ = await identity.effect({
-        params: {
-            id: identityId,
-            failIfNotFound: false
-        },
-        deps
-    });
-
-    const user_ = identity_ && await doLookup(identity_, applicationId, deps);
-
-    if (user_) return user_;
-
-    return user.materialize({
-        type: applicationId,
-        parentId: identityId,
-        status: 'UNAUTHORIZED',
-    });
+    return user_.snapshot();
 }

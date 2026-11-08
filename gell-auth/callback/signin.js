@@ -1,7 +1,7 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const userLookup = require('../../gell-web/user/snapshot/user-alt');
+const userLookup = require('../../gell-web/user/snapshot/user');
 
 /**
  * Creates a new NextAuth signIn callback

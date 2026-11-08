@@ -8,7 +8,7 @@ const user = require('gell-web/domain/user');
 const applicationLookup = require('../../../gell-namespace/snapshot/namespace');
 const application = require('../../../gell-namespace/domain/application');
 
-const userLookup = require('../snapshot/user-alt');
+const userLookup = require('../snapshot/user');
 
 /**
  * WIP: re-implementation of user create action
