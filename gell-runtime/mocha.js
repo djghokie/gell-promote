@@ -11,6 +11,7 @@ const { runtimeLogger } = require('gell-runtime/logger');
 
 const bus = require('../gell-dispatch/bus');
 const resolver = require('../gell-stereotype/dispatch/resolver');
+const stereotypeMiddleware = require('../gell-stereotype/middleware/extension');
 const attributeMiddleware = require('../gell-dispatch/middleware/attributes');
 const argumentMiddleware = require('../gell-dispatch/middleware/arguments');
 const transactionMiddleware = require('../gell-aws-dynamodb/middleware/transaction');
@@ -20,8 +21,9 @@ const transactionMiddleware = require('../gell-aws-dynamodb/middleware/transacti
  *
  * NOTE: re-implementation of gell-runtime/mocha; differences from it, to match the app's buses
  *  - uses gell-dispatch/bus (each invocation gets its own branch of deps) instead of the legacy gell-session bus
- *  - runs the app's generic middleware by default (attributes, arguments, transaction, in the app's order); a suite
- *    adds app specific middleware (e.g. gell-namespace types/namespace) to this.middleware before its first dispatch
+ *  - runs the app's generic middleware by default (attributes, arguments, transaction, in the app's order), after
+ *    gell-stereotype's extension middleware; a suite adds app specific middleware (e.g. gell-namespace
+ *    types/namespace) to this.middleware before its first dispatch
  *  - two catalogs and buses, like the app: this.events (modules exporting action) on $actions, this.snapshots
  *    (modules exporting api) on $snapshots
  *  - this.action(trigger) dispatches on $actions and this.snapshot(trigger) on $snapshots; a trigger is a route
@@ -41,6 +43,7 @@ const transactionMiddleware = require('../gell-aws-dynamodb/middleware/transacti
  *
  */
 exports.MIDDLEWARE = [
+    stereotypeMiddleware,
     attributeMiddleware,
     argumentMiddleware,
     transactionMiddleware,

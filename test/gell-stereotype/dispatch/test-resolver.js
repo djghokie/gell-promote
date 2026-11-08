@@ -133,6 +133,13 @@ describe('gell-stereotype/dispatch/resolver', function() {
         await assert.rejects(this.action({ route: 'WIDGET$things.all#api' }), /no event/);
     })
 
+    it('rejects a regular dispatch of a trigger that requires an extension', async function() {
+        const triggers = { action: { ...CREATE.__metadata.triggers.action, extension: { TYPE: { type: 'string' } } } };
+        this.registerAction({ ...CREATE, __metadata: { ...CREATE.__metadata, triggers } });
+
+        await assert.rejects(this.action({ route: 'thing.create#action', params: { name: 'one' } }), { name: 'ExtensionRequiredError' });
+    })
+
     it('routes regular events to the runtime catalogs', async function() {
         this.registerAction({ ...CREATE, __metadata: { ...CREATE.__metadata, name: 'regular.create' }, action: async () => 'regular' });
 
@@ -166,9 +173,9 @@ describe('gell-stereotype/dispatch/resolver.object', function() {
 
         assert.strictEqual(resource.__metadata.name, 'WIDGET$thing.create');
         assert.strictEqual(resource.__metadata.inherits, 'thing.create');
-        assert.strictEqual(resource.__metadata.extension, 'WIDGET');
-        assert.strictEqual(resource.__metadata.stereotype, 'thing');
-        assert.strictEqual(resource.action, components.f);
+        assert.strictEqual(resource.__metadata.extension, WIDGET);
+        assert.strictEqual(resource.__metadata.stereotype, THING);
+        assert.strictEqual(components.f, CREATE.action);
         assert.deepStrictEqual(names, { resource: 'WIDGET$thing.create', f: 'action' });
     })
 

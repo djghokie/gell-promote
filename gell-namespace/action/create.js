@@ -12,6 +12,10 @@ exports.__metadata = {
                 name: 'string',
                 relativeId: 'string',
             },
+            extension: {
+                TYPE: { type: 'string' },
+                parentContext: { type: 'string', optional: true },
+            },
             transaction: 'NEW'
         }
     },
@@ -75,8 +79,9 @@ exports.effect = async function({ params={}, context={}, deps }) {
  * Invoked by user interfaces as a stereotyped event of a namespace extension (see stereotype/namespace.js):
  *      APPLICATION$namespace.create#action
  *
- * NOTE: the stereotype resolver puts the extension in context.extension; the extension provides the TYPE and the
- * context attribute that holds the parent namespace (parentContext)
+ * NOTE: gell-stereotype's extension middleware puts the extension in context.extension, validated against the trigger's
+ * extension spec: the extension provides the TYPE and the context attribute that holds the parent namespace
+ * (parentContext)
  */
 exports.action = async function({ params={}, context={}, deps }) {
     const { logger } = deps.resolve('logger');
@@ -84,8 +89,6 @@ exports.action = async function({ params={}, context={}, deps }) {
     logger.info('executing action (name="namespace.create")');
 
     const { extension, $txn } = context;
-    assert(extension, 'extension is required; dispatch as <EXTENSION>$namespace.create#action');
-    assert(extension.TYPE, `extension (name=${extension.name}) must define TYPE`);
 
     const { relativeId } = params;
     assert(_.isString(relativeId), 'relativeId (relative namespace) is required');

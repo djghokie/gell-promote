@@ -50,7 +50,7 @@ describe('applications snapshot', function() {
         store = this.deps.resolveSingle('store');
     })
 
-    it.only('returns single application', async function() {
+    it('returns single application', async function() {
         await this.create('Unit Test Web', 'WEB');
 
         const applications_ = await this.applications();

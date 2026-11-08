@@ -9,7 +9,10 @@ exports.__metadata = {
     triggers: {
         effect: {},
         api: {
-            params: {}
+            params: {},
+            extension: {
+                TYPE: { type: 'string' },
+            },
         }
     }
 }
@@ -34,8 +37,9 @@ exports.effect = async function({ params={}, context={}, deps }) {
 }
 
 /**
- * NOTE: as a stereotyped event (e.g. APPLICATION$namespaces.active#api) the type is the extension's TYPE, namespaced
- * through the types registry when it is registered there
+ * NOTE: dispatched as a stereotyped event (e.g. APPLICATION$namespaces.active#api); the type is the extension's TYPE
+ * (validated by gell-stereotype's extension middleware), namespaced through the types registry when it is registered
+ * there
  */
 exports.api = async function({ params={}, context={}, deps }) {
     const { logger } = deps.resolve('logger');
@@ -46,9 +50,7 @@ exports.api = async function({ params={}, context={}, deps }) {
     const { extension } = context;
 
     // const type = types.name(namespace.TYPE);
-    let type = namespace.TYPE;
-
-    if (extension) type = types && types.get(extension.TYPE) ? types.name(extension.TYPE) : extension.TYPE;
+    const type = types && types.get(extension.TYPE) ? types.name(extension.TYPE) : extension.TYPE;
 
     return fetchNamespaces(type, deps);
 }

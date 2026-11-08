@@ -137,6 +137,7 @@ module.exports = function*($resolver, middleware, deps) {
         /**
          * NOTE: invocation spec is always provided so middleware can identify the event being invoked
          *  - triggerSpec is empty if the event module does not define metadata for the trigger
+         *  - metadata is the event module's __metadata (empty if it does not define any)
          */
         const { __metadata:md } = eventModule;
         const { triggers={} } = md || {};
@@ -145,7 +146,8 @@ module.exports = function*($resolver, middleware, deps) {
             route,
             eventName,
             triggerName,
-            triggerSpec: triggers[triggerName] || {}
+            triggerSpec: triggers[triggerName] || {},
+            metadata: md || {},
         };
 
         const chainFunctions = [...middleware];

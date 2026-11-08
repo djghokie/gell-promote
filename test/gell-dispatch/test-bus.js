@@ -168,7 +168,8 @@ describe('event bus', function() {
                 route: 'nometadata#action',
                 eventName: 'nometadata',
                 triggerName: 'action',
-                triggerSpec: {}
+                triggerSpec: {},
+                metadata: {}
             });
         })
     })

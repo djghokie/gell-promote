@@ -59,28 +59,6 @@ function inheritedEvent(def, eventName, catalog, stereotypes, visited=new Set())
 }
 
 /**
- * Wraps an inherited trigger so it is invoked with extension specific information in its context
- *
- * NOTE: the context is copied, so the caller's context object is not modified; middleware has already run, so the
- * copy carries whatever it added (e.g. $txn)
- *
- * WIP: only the extension and the stereotype that declared the event are passed; the extension's configuration
- * (TYPE, parent, ...) is read from context.extension by the stereotype's handlers
- */
-function wrapTrigger(triggerF, extension, stereotype) {
-    return function(event) {
-        return triggerF({
-            ...event,
-            context: {
-                ...event.context,
-                extension,
-                stereotype,
-            }
-        });
-    }
-}
-
-/**
  * Resolves a regular route (e.g. namespace.create#action) in the resource map, like gell-session's resolver.object
  */
 function resolveRegular(obj, resourceName, functionName, names) {
@@ -97,8 +75,11 @@ function resolveRegular(obj, resourceName, functionName, names) {
  * inherits, through the "stereotypes" dependency
  *
  *  - resource: the inherited event module, with its __metadata renamed to the stereotyped route, so the bus and its
- *    middleware validate params, context, and transactions with the inherited trigger's spec
- *  - components.f: the requested trigger of the inherited module, wrapped (see wrapTrigger)
+ *    middleware validate params, context, and transactions with the inherited trigger's spec; __metadata.extension
+ *    and __metadata.stereotype are the extension and the stereotype that declared the event (objects)
+ *  - components.f: the requested trigger of the inherited module
+ *
+ * NOTE: the extension is put in the trigger's context by middleware/extension, which also validates it
  */
 function resolveStereotyped(deps, catalog, delimiter, resourceName, functionName, names) {
     const notFound = [undefined, {}, names];
@@ -118,21 +99,18 @@ function resolveStereotyped(deps, catalog, delimiter, resourceName, functionName
 
     const { stereotype, module } = found;
 
-    const triggerF = functionName ? module[functionName] : undefined;
-    const f = _.isFunction(triggerF) ? wrapTrigger(triggerF, extension, stereotype) : undefined;
-
     const resource = {
         ...module,
         __metadata: {
             ...module.__metadata,
             name: resourceName,
-            extension: extension.name,
-            stereotype: stereotype.name,
             inherits: eventName,
+            extension,
+            stereotype,
         },
     };
 
-    if (f) resource[functionName] = f;
+    const f = functionName ? module[functionName] : undefined;
 
     return [resource, { resource, f }, names];
 }
