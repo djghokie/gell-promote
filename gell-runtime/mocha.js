@@ -7,11 +7,10 @@ const DependencyContainer = require('gell-dependency/container');
 const discover = require('gell-promote/gell-discover/node');
 const { Types } = require('../gell-discover/domain/types');
 
-const resolver = require('gell-session/dispatch/resolver');
 const { runtimeLogger } = require('gell-runtime/logger');
 
 const bus = require('../gell-dispatch/bus');
-const stereotypeResolver = require('../gell-stereotype/dispatch/resolver');
+const resolver = require('../gell-stereotype/dispatch/resolver');
 const attributeMiddleware = require('../gell-dispatch/middleware/attributes');
 const argumentMiddleware = require('../gell-dispatch/middleware/arguments');
 const transactionMiddleware = require('../gell-aws-dynamodb/middleware/transaction');
@@ -57,23 +56,20 @@ exports.beforeAll = function() {
 
     this.middleware = [...exports.MIDDLEWARE];
 
-    const [$actionResolver] = init(resolver.object(this.events));
-    const [$snapshotResolver] = init(resolver.object(this.snapshots));
-
     this.deps = new DependencyContainer({
         logger,
 
         types: this.types,
 
-        // NOTE: stereotyped routes (EXTENSION$stereotype.event#trigger) resolve through the stereotypes dependency
-        // (optional; see gell-stereotype/ut/mocha), all other routes through the catalogs above
+        // NOTE: regular routes resolve in the catalogs above; stereotyped routes (EXTENSION$stereotype.event#trigger)
+        // through the stereotypes dependency (optional; see gell-stereotype/ut/mocha)
         $actions: deps => {
-            const [$resolver] = init(stereotypeResolver.resolver($actionResolver, deps, { catalog: 'actions' }));
+            const [$resolver] = init(resolver.object(this.events, { deps, catalog: 'actions' }));
 
             return init(bus($resolver, this.middleware, deps))[0];
         },
         $snapshots: deps => {
-            const [$resolver] = init(stereotypeResolver.resolver($snapshotResolver, deps, { catalog: 'snapshots' }));
+            const [$resolver] = init(resolver.object(this.snapshots, { deps, catalog: 'snapshots' }));
 
             return init(bus($resolver, this.middleware, deps))[0];
         },

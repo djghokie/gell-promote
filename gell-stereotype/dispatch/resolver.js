@@ -2,7 +2,6 @@ const assert = require('assert');
 const _ = require('lodash');
 
 const { State } = require('gell');
-const { isIterator } = require('gell/util');
 
 /**
  * Separates an extension name from an inherited event name in a stereotyped route:
@@ -82,74 +81,97 @@ function wrapTrigger(triggerF, extension, stereotype) {
 }
 
 /**
- * Resolver for buses that routes stereotyped events to the implementation an extension inherits; all other
- * routes go to $fallback (e.g. gell-session/dispatch/resolver.object)
+ * Resolves a regular route (e.g. namespace.create#action) in the resource map, like gell-session's resolver.object
+ */
+function resolveRegular(obj, resourceName, functionName, names) {
+    const resource = obj[resourceName];
+    const components = { resource };
+
+    if (resource && functionName) components.f = resource[functionName];
+
+    return [resource, components, names];
+}
+
+/**
+ * Resolves a stereotyped route (e.g. APPLICATION$namespace.create#action) to the event the extension declares or
+ * inherits, through the "stereotypes" dependency
  *
- * Yields the same [resource, components, names] triple as gell-session resolvers:
  *  - resource: the inherited event module, with its __metadata renamed to the stereotyped route, so the bus and its
  *    middleware validate params, context, and transactions with the inherited trigger's spec
  *  - components.f: the requested trigger of the inherited module, wrapped (see wrapTrigger)
- *  - names: { resource: 'APPLICATION$namespace.create', f: 'action' }
+ */
+function resolveStereotyped(deps, catalog, delimiter, resourceName, functionName, names) {
+    const notFound = [undefined, {}, names];
+
+    const at = resourceName.indexOf(delimiter);
+    const extensionName = resourceName.slice(0, at);
+    const eventName = resourceName.slice(at + delimiter.length);
+
+    const stereotypes = deps && deps.resolveSingle({ name: 'stereotypes', optional: true });
+    if (!stereotypes) return notFound;
+
+    const extension = stereotypes.get(extensionName);
+    if (!extension) return notFound;
+
+    const found = inheritedEvent(extension, eventName, catalog, stereotypes);
+    if (!found) return notFound;
+
+    const { stereotype, module } = found;
+
+    const triggerF = functionName ? module[functionName] : undefined;
+    const f = _.isFunction(triggerF) ? wrapTrigger(triggerF, extension, stereotype) : undefined;
+
+    const resource = {
+        ...module,
+        __metadata: {
+            ...module.__metadata,
+            name: resourceName,
+            extension: extension.name,
+            stereotype: stereotype.name,
+            inherits: eventName,
+        },
+    };
+
+    if (f) resource[functionName] = f;
+
+    return [resource, { resource, f }, names];
+}
+
+/**
+ * Resolver for buses that handles both regular and stereotyped routes; a drop in replacement for gell-session's
+ * resolver.object
+ *  - regular routes (namespace.create#action) resolve in the resource map obj
+ *  - stereotyped routes (APPLICATION$namespace.create#action) resolve to the event the extension declares or
+ *    inherits from its stereotypes
+ *
+ * Yields the same [resource, components, names] triple as gell-session resolvers; names is
+ *      { resource: 'APPLICATION$namespace.create', f: 'action' }
  *
  * Extensions are looked up in the "stereotypes" dependency (optional) on every resolution, so a registry defined
  * after the bus was built is used
  *
- * WIP: resolved modules are rebuilt on every call; cache them per route if this becomes hot
+ * WIP: resolved stereotyped modules are rebuilt on every call; cache them per route if this becomes hot
  *
- * @param {*} $fallback resolver for regular (non stereotyped) routes
- * @param {*} deps container that defines the stereotypes registry
+ * @param {*} obj resource map of regular events, by name (e.g. registry __events or __snapshots)
+ * @param {*} options.deps container that defines the stereotypes registry; without it only regular routes resolve
  * @param {*} options.catalog the stereotype catalog to search: 'actions' or 'snapshots'
  */
-exports.resolver = function*($fallback, deps, { catalog='actions', delimiter=DELIMITER }={}) {
-    assert(isIterator($fallback), '$fallback resolver is required');
-    assert(deps, 'deps is required');
+exports.object = function*(obj, { deps, catalog='actions', delimiter=DELIMITER }={}) {
+    assert(_.isObjectLike(obj), 'resource map (object) is required');
     assert(['actions', 'snapshots'].includes(catalog), 'catalog must be actions or snapshots');
-
-    function resolve(route) {
-        const [resourceName, functionName] = route.split('#');
-
-        const names = { resource: resourceName, f: functionName };
-        const notFound = [undefined, {}, names];
-
-        const at = resourceName.indexOf(delimiter);
-        const extensionName = resourceName.slice(0, at);
-        const eventName = resourceName.slice(at + delimiter.length);
-
-        const stereotypes = deps.resolveSingle({ name: 'stereotypes', optional: true });
-        if (!stereotypes) return notFound;
-
-        const extension = stereotypes.get(extensionName);
-        if (!extension) return notFound;
-
-        const found = inheritedEvent(extension, eventName, catalog, stereotypes);
-        if (!found) return notFound;
-
-        const { stereotype, module } = found;
-
-        const triggerF = functionName ? module[functionName] : undefined;
-        const f = _.isFunction(triggerF) ? wrapTrigger(triggerF, extension, stereotype) : undefined;
-
-        const resource = {
-            ...module,
-            __metadata: {
-                ...module.__metadata,
-                name: resourceName,
-                extension: extension.name,
-                stereotype: stereotype.name,
-                inherits: eventName,
-            },
-        };
-
-        if (f) resource[functionName] = f;
-
-        return [resource, { resource, f }, names];
-    }
 
     let name = yield new State();
 
     while (true) {
-        if (_.isString(name) && name.split('#')[0].includes(delimiter)) name = yield resolve(name);
-        else if (_.isString(name)) name = yield $fallback.next(name).value;
+        if (_.isString(name)) {
+            const [resourceName, functionName] = name.split('#');
+            const names = { resource: resourceName, f: functionName };
+
+            if (resourceName.includes(delimiter)) {
+                name = yield resolveStereotyped(deps, catalog, delimiter, resourceName, functionName, names);
+            }
+            else name = yield resolveRegular(obj, resourceName, functionName, names);
+        }
         else name = yield;
     }
 }
