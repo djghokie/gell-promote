@@ -4,6 +4,9 @@ const MockStore = require('gell-aws-dynamodb/mock/store');
 
 const runtime = require('../../gell-runtime/mocha');
 
+const tenant = require('../../gell-namespace/domain/tenant');
+const application = require('../../gell-namespace/domain/application');
+
 const ACTION = {
     __metadata: {
         name: 'unittest.thing.create',
@@ -47,6 +50,43 @@ describe('gell-runtime/mocha', function() {
         assert.strictEqual(this.events['unittest.thing.create'], ACTION);
         assert.strictEqual(this.snapshots['unittest.things'], SNAPSHOT);
         assert.strictEqual(this.events['unittest.things'], undefined);
+    })
+
+    describe('registerType', function() {
+        it('registers the TYPE on the types dependency', function() {
+            this.registerType(tenant);
+
+            const types = this.deps.resolveSingle('types');
+
+            assert.strictEqual(types, this.types);
+            assert.strictEqual(types.get(tenant.TYPE), tenant.model);
+        })
+
+        it('scopes the TYPE to a namespace', function() {
+            this.registerType(application, 'ECOSYSTEM');
+            this.types.set('namespace', 'UNITTEST', 'ECOSYSTEM');
+
+            assert.strictEqual(this.types.name(application.TYPE), `UNITTEST::${application.TYPE}`);
+        })
+
+        it('requires a TYPE', function() {
+            assert.throws(() => this.registerType({ model: {} }));
+        })
+    })
+
+    describe('discover', function() {
+        beforeEach(function() {
+            this.discover(`${__dirname}/../../gell-namespace`);
+        })
+
+        it('registers discovered action modules as events', function() {
+            assert(this.events['namespace.application.create'], 'missing namespace.application.create');
+        })
+
+        it('registers discovered api modules as snapshots', function() {
+            assert(this.snapshots['namespace.applications.active'], 'missing namespace.applications.active');
+            assert.strictEqual(this.events['namespace.applications.active'], undefined);
+        })
     })
 
     it('dispatches actions on $actions with a transaction', async function() {

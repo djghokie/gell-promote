@@ -30,7 +30,7 @@ const transactionMiddleware = require('../gell-aws-dynamodb/middleware/transacti
  *
  * usage
  *      before(runtime.beforeAll);
- *      beforeEach(function() { this.register(discover([...])) });
+ *      beforeEach(function() { this.discover(`${__dirname}/../gell-namespace`) });
  *      await this.action({ route: 'namespace.application.create#action', caller, params });
  *      await this.snapshot({ route: 'namespace.applications.active#api', caller, params });
  *
