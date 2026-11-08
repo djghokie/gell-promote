@@ -15,7 +15,7 @@ function setupTypes() {
 
 function configureEvents() {
     this.discover(
-        `${__dirname}/../../gell-namespace`
+        // `${__dirname}/../../gell-namespace`
     );
 }
 

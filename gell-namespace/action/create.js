@@ -10,6 +10,7 @@ exports.__metadata = {
         action: {
             params: {
                 name: 'string',
+                relativeId: 'string',
             },
             transaction: 'NEW'
         }
@@ -68,4 +69,30 @@ exports.effect = async function({ params={}, context={}, deps }) {
     assert(parent_, 'parent_ is required');
 
     return doInitiate(type, parent_.snapshotPartial(['id']), params, context.$txn, deps);
+}
+
+/**
+ * Invoked by user interfaces as a stereotyped event of a namespace extension (see stereotype/namespace.js):
+ *      APPLICATION$namespace.create#action
+ *
+ * NOTE: the stereotype resolver puts the extension in context.extension; the extension provides the TYPE and the
+ * context attribute that holds the parent namespace (parentContext)
+ */
+exports.action = async function({ params={}, context={}, deps }) {
+    const { logger } = deps.resolve('logger');
+
+    logger.info('executing action (name="namespace.create")');
+
+    const { extension, $txn } = context;
+    assert(extension, 'extension is required; dispatch as <EXTENSION>$namespace.create#action');
+    assert(extension.TYPE, `extension (name=${extension.name}) must define TYPE`);
+
+    const { relativeId } = params;
+    assert(_.isString(relativeId), 'relativeId (relative namespace) is required');
+
+    const parentContext = extension.parentContext || 'parent_';
+    const parent_ = context[parentContext];
+    assert(parent_, `parent is required (context=${parentContext})`);
+
+    return doInitiate(extension.TYPE, parent_.snapshotPartial(['id']), params, $txn, deps);
 }
