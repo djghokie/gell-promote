@@ -1,8 +1,11 @@
+const assert = require('assert');
 const _ = require('lodash');
 
 const { init } = require('gell/future');
 
 const DependencyContainer = require('gell-dependency/container');
+const discover = require('gell-promote/gell-discover/node');
+const { Types } = require('../gell-discover/domain/types');
 
 const resolver = require('gell-session/dispatch/resolver');
 const { runtimeLogger } = require('gell-runtime/logger');
@@ -32,12 +35,10 @@ const transactionMiddleware = require('../gell-aws-dynamodb/middleware/transacti
  *      await this.snapshot({ route: 'namespace.applications.active#api', caller, params });
  *
  * WIP: buses are dependency singletons built on first dispatch, so middleware added after it is ignored
+ * 
+ * WIP: not sure this belongs in gell-runtime
+ *  - these are mostly gell-dispatch related features
  *
- * WIP: still differs from the app
- *  - callers are whatever the test passes, not session State (browser.materialize); no 401/403 authorization
- *  - results are returned as is, not serialized (result.snapshot() as JSON)
- *  - params are not serialized (HTTP GET params are strings, plus the router's _event)
- *  - #effect routes dispatch through $actions, but app code calls effects directly (no bus middleware)
  */
 exports.MIDDLEWARE = [
     attributeMiddleware,
@@ -49,6 +50,7 @@ exports.beforeAll = function() {
     const logger = runtimeLogger('unittest');
     this.logger = logger;
 
+    this.types = new Types();
     this.events = {};
     this.snapshots = {};
 
@@ -60,14 +62,33 @@ exports.beforeAll = function() {
     this.deps = new DependencyContainer({
         logger,
 
+        types: this.types,
+
         $actions: deps => init(bus($actionResolver, this.middleware, deps))[0],
         $snapshots: deps => init(bus($snapshotResolver, this.middleware, deps))[0],
     })
 
-    /**
-     * Registers the modules discovered by gell-discover (registry_.__events and registry_.__snapshots)
-     */
-    this.register = function(registry_) {
+    this.registerType = function(typeModule, namespace) {
+        assert(typeModule.TYPE);
+
+        this.types.register(typeModule.TYPE, typeModule.model, namespace);
+    }
+
+    this.registerAction = function(def) {
+        assert(def.__metadata.name);
+
+        this.events[def.__metadata.name] = def;
+    }
+
+    this.registerSnapshot = function(def) {
+        assert(def.__metadata.name);
+
+        this.snapshots[def.__metadata.name] = def;
+    }
+
+    this.discover = function(...paths) {
+        const registry_ = discover(paths);
+    
         const { __events: events={}, __snapshots: snapshots={} } = registry_;
 
         Object.assign(this.events, events);

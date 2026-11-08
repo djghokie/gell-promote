@@ -1,5 +1,3 @@
-const discover = require('gell-promote/gell-discover/node');
-
 const sessionQueries = require('gell-session/dynamodb/queries');
 const activeQueries = require('gell-session/dynamodb/active/queries');
 const activityQueries = require('gell-session/dynamodb/activity/queries');
@@ -7,31 +5,21 @@ const activityQueries = require('gell-session/dynamodb/activity/queries');
 const MockStore = require('gell-aws-dynamodb/mock/store');
 const queryWrapper = require('gell-aws-dynamodb/query-wrapper');
 
-const { Types } = require('../../gell-discover/domain/types');
-
 const tenant = require('../../gell-namespace/domain/tenant');
 const application = require('../../gell-namespace/domain/application');
 
-function setupTypes(deps) {
-    const types = new Types();
-    types.register(tenant.TYPE, tenant.model);
-    types.register(application.TYPE, application.model);
-
-    deps.define("types", types);
+function setupTypes() {
+    this.registerType(tenant);
+    this.registerType(application);
 }
 
-function configureEvents(deps) {
-    const registry_ = discover([
-        `${__dirname}/../../gell-namespace`,
-    ]);
-
-    this.deps.define('registry', registry_);
-
-    // NOTE: action modules go on $bus, api modules on $snapshots (see gell-runtime/mocha)
-    this.register(registry_);
+function configureEvents() {
+    this.discover(
+        `${__dirname}/../../gell-namespace`
+    );
 }
 
-function setupStore(deps) {
+function setupStore() {
     const store = new MockStore();
     Object.assign(store.namedQueries,
         queryWrapper.ut(sessionQueries),
@@ -39,14 +27,14 @@ function setupStore(deps) {
         queryWrapper.ut(activityQueries),
     );
     
-    deps.define('store', store);
+    this.deps.define('store', store);
     this.store = store;
 }
 
 exports.beforeEach = function() {
-    setupTypes(this.deps);
-
-    configureEvents.bind(this)();
-
-    setupStore(this.deps);
+    [
+        setupTypes,
+        configureEvents,
+        setupStore
+    ].forEach(f => f.bind(this)());
 }

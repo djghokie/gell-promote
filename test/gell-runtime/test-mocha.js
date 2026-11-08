@@ -39,10 +39,8 @@ describe('gell-runtime/mocha', function() {
     beforeEach(function() {
         this.deps.define('store', new MockStore());
 
-        this.register({
-            __events: { [ACTION.__metadata.name]: ACTION },
-            __snapshots: { [SNAPSHOT.__metadata.name]: SNAPSHOT },
-        });
+        this.registerAction(ACTION);
+        this.registerSnapshot(SNAPSHOT);
     })
 
     it('registers action modules as events and api modules as snapshots', function() {
