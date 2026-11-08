@@ -1,11 +1,7 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const initiate = require('gell-session/event/initiate');
 const activate = require('gell-session/event/activate');
-
-const ecosystem = require('gell-promote/gell-namespace/domain/ecosystem');
-const tenant = require('gell-promote/gell-namespace/domain/tenant');
 
 exports.__metadata = {
     name: 'namespace.create',
@@ -72,27 +68,4 @@ exports.effect = async function({ params={}, context={}, deps }) {
     assert(parent_, 'parent_ is required');
 
     return doInitiate(type, parent_.snapshotPartial(['id']), params, context.$txn, deps);
-}
-
-exports.action = async function({ params={}, context={}, deps }) {
-    const { logger, types } = deps.resolve('logger', 'types');
-
-    logger.info('executing action (name="namespace.create")');
-    
-    const { name } = params;
-    const { $txn } = context;
-
-    const tenant_ = types.instance(tenant.TYPE, {
-        name,
-        status: 'ACTIVE'
-    });
-
-    return initiate.effect({
-        params: tenant_.snapshot(),
-        context: {
-            parent_: ecosystem.materialize({ id: "INCUBATOR" }),
-            $txn
-        },
-        deps
-    });
 }
