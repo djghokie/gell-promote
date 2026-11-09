@@ -10,9 +10,13 @@ const TYPE = 'DOCUMENT#SIGNED';
  *  - text is the exact rendered text that was signed; values are the merge field values it was rendered with
  *  - data: application values to keep with the signature (e.g. { hourlyRate }), not shown in the text
  *  - signature.hash is the SHA-256 of the title and text (see ../lib/signature), so a later change shows
+ *  - signed through an e-signature service (../event/request): service/serviceDocumentId/requestId, and the
+ *    service's completed PDF (with its audit page) in documentStorage at pdfKey, with its SHA-256 in pdfHash
+ *  - typed-name signatures (../event/sign) have no PDF
  */
 const STATUSES = {
     SIGNED: { description: 'signed' },
+    SUPERSEDED: { description: 'signed after its request was cancelled - kept, but not the current signature' },
 };
 
 const model = {
@@ -46,6 +50,17 @@ const model = {
             attributes: ['name', 'signedTs', 'hash']
         },
         signedTs: 'timestamp',
+        service: 'string',
+        serviceDocumentId: 'string',
+        requestId: 'string',
+        pdfKey: {
+            type: 'string',
+            description: 'documentStorage key of the signed PDF (with the audit page)'
+        },
+        pdfHash: {
+            type: 'string',
+            description: 'SHA-256 (hex) of the signed PDF as downloaded'
+        },
     },
 
     workflow: {
