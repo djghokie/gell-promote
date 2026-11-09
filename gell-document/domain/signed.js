@@ -1,0 +1,61 @@
+const javascript = require('gell-domain/binding/javascript');
+const session = require('gell-session/domain/session');
+
+const TYPE = 'DOCUMENT#SIGNED';
+
+/**
+ * A document as it was signed - immutable once saved
+ *  - parentId/parentType: the record it was signed for (an employee FILE, a CONTRACT, ...)
+ *  - name: the template name (see ./template); templateId/templateVersion: the exact version signed
+ *  - text is the exact rendered text that was signed; values are the merge field values it was rendered with
+ *  - data: application values to keep with the signature (e.g. { hourlyRate }), not shown in the text
+ *  - signature.hash is the SHA-256 of the title and text (see ../lib/signature), so a later change shows
+ */
+const STATUSES = {
+    SIGNED: { description: 'signed' },
+};
+
+const model = {
+    name: TYPE,
+    extends: [session.model],
+    attributes: {
+        type: {
+            type: 'string',
+            default: TYPE
+        },
+        status: {
+            type: 'string',
+            default: 'SIGNED'
+        },
+        name: 'string',
+        parentType: 'string',
+        templateId: 'string',
+        templateVersion: 'number',
+        title: 'string',
+        text: 'text',
+        values: {
+            type: 'object',
+            description: 'the merge field values the text was rendered with'
+        },
+        data: {
+            type: 'object',
+            description: 'application values kept with the signature, e.g. { hourlyRate }'
+        },
+        signature: {
+            type: 'complex',
+            attributes: ['name', 'signedTs', 'hash']
+        },
+        signedTs: 'timestamp',
+    },
+
+    workflow: {
+        statuses: STATUSES
+    }
+}
+
+module.exports = {
+    TYPE,
+    STATUSES,
+    model,
+    materialize: session$ => javascript.materialize(session$, model)
+}
