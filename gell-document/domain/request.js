@@ -53,6 +53,10 @@ const model = {
         signedId: 'string',
         completedTs: 'timestamp',
         closedTs: 'timestamp',
+        purgedOn: {
+            type: 'string',
+            description: 'YYYY-MM-DD the signer and the service\'s copy were removed with its parent record (document.purge)'
+        },
         reason: {
             type: 'string',
             description: 'why a request was cancelled, declined or expired'

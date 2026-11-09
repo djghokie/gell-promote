@@ -61,6 +61,10 @@ const model = {
             type: 'string',
             description: 'SHA-256 (hex) of the signed PDF as downloaded'
         },
+        purgedOn: {
+            type: 'string',
+            description: 'YYYY-MM-DD the signed PDF was deleted (here and at the service) with its parent record (document.purge)'
+        },
     },
 
     workflow: {

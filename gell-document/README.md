@@ -43,6 +43,10 @@ Dependencies:
   `{ signed_, request_, $txn }`. An explicit dependency because gell discovery only registers modules with an
   action or api.
 
+Retention: `document.purge` calls `signing.remove` (SignWell `DELETE /documents/{id}`) for every document the
+record has at the service. WIP: whether SignWell keeps anything after a delete (backups, audit logs) or has an
+account-level retention setting is to be confirmed with SignWell.
+
 SignWell: documents are created for embedded signing (no SignWell emails; the application sends the link) and
 in test mode unless `testMode: false` - test documents are free and **not legally binding**. Events are verified
 with HMAC-SHA256 of `type@time` keyed by the webhook's id.
@@ -58,6 +62,7 @@ Effects only - applications expose them through their own actions/apis with thei
 - `event/cancel` (`document.request.cancel`) - cancels a record's PENDING requests on the service (`cancelRequest` for one)
 - `event/webhook` (`document.request.webhook`, public action) - verifies a service event and hands it to complete or close; ignores other documents and the other mode (test/live)
 - `event/complete` (`document.request.complete`) - downloads the signed PDF, puts the `DOCUMENT#SIGNED`, runs the application's hook; safe to receive twice
+- `event/purge` (`document.purge`) - retention: deletes a record's signed PDFs and asks the service to delete its copies; keeps the signed text and signature record with `purgedOn`
 - `event/close` (`document.request.close`) - records a PENDING request declined, expired or cancelled
 - `snapshot/requests` (`document.requests`) - a record's requests, newest first
 - `snapshot/download` (`document.signed.download`) - a temporary link to a signed PDF: `{ url, filename }`
