@@ -11,6 +11,8 @@ const TYPE = 'MAIL#MESSAGE';
  *  - parentId/parentType: the record the email is about (an employee FILE, an ITINERARY); more records
  *    are associated with MAIL#REFERENCE items (see ./reference)
  *  - message is the rendered SendGrid payload (personalizations, from, subject, content or template_id)
+ *  - attachments are references to stored files ({ storage, key, filename, type }), read when the message is
+ *    delivered - the file itself is never stored on the message
  *  - activeTs is set while QUEUED, so queued messages are found with the sessions.active.type query
  */
 const STATUSES = {
@@ -45,6 +47,10 @@ const model = {
         to: {
             type: 'array',
             description: 'recipient addresses, for listing'
+        },
+        attachments: {
+            type: 'array',
+            description: 'files attached when it is sent: { storage (the dependency holding it, with get(key)), key, filename, type }'
         },
         subject: {
             type: 'string',

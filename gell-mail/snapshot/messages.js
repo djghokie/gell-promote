@@ -43,7 +43,7 @@ async function messages(parentId, deps) {
 
     return [...own$, ...referenced$]
         .sort((m1, m2) => (m2.initiatedTs || 0) - (m1.initiatedTs || 0))
-        .map(m$ => _.pick(m$, SUMMARY));
+        .map(m$ => ({ ..._.pick(m$, SUMMARY), ...(m$.attachments ? { attachments: m$.attachments.map(a => a.filename) } : {}) }));
 }
 
 exports.effect = async function({ params={}, deps }) {

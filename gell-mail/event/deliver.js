@@ -12,6 +12,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  *  - SENT: sentTs, no longer active; ttl when the message has retainDays
  *  - a failed send counts an attempt and keeps the message QUEUED (and rethrows, so the stream retries it);
  *    after MAX_ATTEMPTS it is FAILED and no longer retried
+ *  - attachments are read from their storage dependency and sent with the message (SendGrid attachments);
+ *    a file that can't be read fails the send like any other error
  *  - returns the message State
  *
  * WIP: delivery is at least once - two deliveries of the same message at the same moment (stream and flush)
@@ -27,6 +29,24 @@ exports.__metadata = {
             }
         }
     }
+}
+
+async function withAttachments(message$, attachments=[], deps) {
+    if (!attachments.length) return message$;
+
+    const files = await Promise.all(attachments.map(async ({ storage, key, filename, type }) => {
+        const bytes = await deps.resolveSingle(storage).get(key);
+        if (!bytes) throw new Error(`attachment not found (storage=${storage}; key=${key})`);
+
+        return {
+            content: Buffer.from(bytes).toString('base64'),
+            filename,
+            type: type || 'application/octet-stream',
+            disposition: 'attachment',
+        };
+    }));
+
+    return { ...message$, attachments: [...(message$.attachments || []), ...files] };
 }
 
 exports.effect = async function({ params={}, deps }) {
@@ -45,7 +65,7 @@ exports.effect = async function({ params={}, deps }) {
         return undefined;
     }
 
-    const { id, name, status, attempts=0, retainDays, message: message$ } = message_.snapshotPartial(['id', 'name', 'status', 'attempts', 'retainDays', 'message']);
+    const { id, name, status, attempts=0, retainDays, message: message$, attachments } = message_.snapshotPartial(['id', 'name', 'status', 'attempts', 'retainDays', 'message', 'attachments']);
 
     if (status !== 'QUEUED') {
         logger.info(`email already delivered (id=${id}; status=${status})`);
@@ -56,7 +76,7 @@ exports.effect = async function({ params={}, deps }) {
     let failure;
 
     try {
-        await mail.send(message$);
+        await mail.send(await withAttachments(message$, attachments, deps));
 
         message_.set('status', 'SENT');
         message_.set('sentTs', now);

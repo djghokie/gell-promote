@@ -10,6 +10,9 @@ const reference = require('../domain/reference');
  *  - params.name: which email this is (e.g. 'hr.employee.invitation.email')
  *  - params.retainDays (optional): expire the message this many days after it is sent; otherwise it is kept with its parent
  *  - context.parent_: the record the email is about - a State, or a { type, id } key
+ *  - params.attachments (optional): files to attach - [{ storage, key, filename, type }]: storage names the
+ *    dependency the file is read from when the message is sent (get(key) -> bytes), e.g. gell-document's
+ *    documentStorage.locate(key)
  *  - context.also_ (optional): more records it is about; one MAIL#REFERENCE is written for each
  *  - nothing is sent here: the message is delivered after the transaction commits (see ./deliver)
  */
@@ -21,6 +24,7 @@ exports.__metadata = {
             params: {
                 name: 'string',
                 message: 'object',
+                attachments: { type: 'array', optional: true },
             },
             context: {
                 parent_: 'state',
@@ -47,7 +51,7 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     logger.info('executing effect (name="mail.message.queue")');
 
-    const { name, message: message$, retainDays } = params;
+    const { name, message: message$, retainDays, attachments } = params;
     const { parent_, also_=[], $txn } = context;
 
     assert(message$, 'message is required');
@@ -66,6 +70,7 @@ exports.effect = async function({ params={}, context={}, deps }) {
         message: message$,
         to,
         subject: message$.subject || message$.template_id,
+        ...(attachments && attachments.length ? { attachments: attachments.map(a => _.pick(a, ['storage', 'key', 'filename', 'type'])) } : {}),
         attempts: 0,
         retainDays,
         activeTs: Date.now(),
