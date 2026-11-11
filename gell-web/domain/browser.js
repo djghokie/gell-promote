@@ -20,6 +20,10 @@ const model = {
         role: {
             type: 'string',
             description: 'authorizes BROWSER session for a particular role'
+        },
+        tenantId: {
+            type: 'string',
+            description: 'TENANT selected by the BROWSER session; role is the USER\'s role in it'
         }
     }
 }

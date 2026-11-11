@@ -28,6 +28,15 @@ const activate = require('gell-session/event/activate');
  *  - more in line with the vision of modeling all applications as a series of sessions
  *  - perhaps we could make this optional
  *      - don't think we want to do that tho
+ * 
+ * NOTE: the stored type is namespaced through the "types" registry (when one is defined and has the type registered)
+ *  - the effect accepts context.namespaceId to override the registered namespace (same as types.name)
+ *  - the type is always set here, so a type passed in params is ignored
+ * 
+ * OPTIONS
+ *  - activate: activates the new session
+ *  - validate: async ({ session$, parent$, deps }) called before the session is initiated; throw to reject
+ *      - session$ already has its (namespaced) type and parentId
  */
 function createInitiate(__metadata={}, type, options) {
     assert(type, 'gell type is required');
@@ -39,17 +48,22 @@ function createInitiate(__metadata={}, type, options) {
 
     const { name } = __metadata;
 
-    async function doInitiate(parent$, defaults, $txn, deps) {
+    async function doInitiate(parent$, defaults, namespaceId, $txn, deps) {
+        const session$ = Object.assign({}, defaults, {
+            type: typeName(type, deps, namespaceId),
+            parentId: parent$.id
+        });
+
+        if (options?.validate) await options.validate({ session$, parent$, deps });
+
         const session_ = await initiate.effect({
             context: {
                 model: type,
-                session$: defaults,
+                session$,
                 $txn
             },
             deps
         });
-
-        session_.set('parentId', parent$.id);
 
         if (options?.activate) {
             await activate.effect({
@@ -71,7 +85,7 @@ function createInitiate(__metadata={}, type, options) {
         const { parent_ } = context;
         assert(parent_, 'parent_ is required');
 
-        return doInitiate(parent_.snapshotPartial(['id']), params, context.$txn, deps);
+        return doInitiate(parent_.snapshotPartial(['id']), params, context.namespaceId, context.$txn, deps);
     }
 
     async function action({ params={}, context={}, deps }) {
@@ -93,10 +107,44 @@ function createInitiate(__metadata={}, type, options) {
             deps
         });
 
-        return doInitiate(parent$, params, context.$txn, deps);
+        return doInitiate(parent$, params, undefined, context.$txn, deps);
     }
 
     return { __metadata, effect, action };
+}
+
+/**
+ * Finds an attribute definition on a model or any model it extends (own attributes win)
+ *
+ * WIP: walks the extends chain instead of "compiling" the model with gell-domain
+ *  - only object attribute specs are supported (array specs are skipped)
+ */
+function findAttribute(model, attribute) {
+    if (!model) return;
+
+    const { attributes } = model;
+
+    if (attributes && !Array.isArray(attributes) && attributes[attribute]) return attributes[attribute];
+
+    const bases = Array.isArray(model.extends) ? model.extends : [model.extends];
+
+    for (const base of bases) {
+        const def = findAttribute(base, attribute);
+
+        if (def) return def;
+    }
+}
+
+/**
+ * Resolves the stored type name: namespaced through the "types" registry when one is defined and has the
+ * type registered, otherwise the bare TYPE
+ *
+ * NOTE: namespaceId is optional and overrides the registered namespace (see types.name)
+ */
+function typeName(type, deps, namespaceId) {
+    const types = deps.resolveSingle({ name: 'types', optional: true });
+
+    return types && types.get(type.TYPE) ? types.name(type.TYPE, namespaceId) : type.TYPE;
 }
 
 /**
@@ -126,8 +174,7 @@ function createUpdate(__metadata={}, type) {
     const { name } = __metadata;
 
     /**
-     * WIP: handle inherited attributes
-     *  - would need to "compile" the model using gell-domain
+     * NOTE: updates a single attribute per call
      * 
      * @param {*} session_ 
      * @param {*} attribute 
@@ -137,7 +184,7 @@ function createUpdate(__metadata={}, type) {
      * @returns 
      */
     async function doUpdate(session_, attribute, value, $txn, deps) {
-        const def = type.model.attributes[attribute];
+        const def = findAttribute(type.model, attribute);
         assert(def, `no attribute (name=${attribute}) defined by model`);
 
         const { editable } = def;
@@ -174,7 +221,7 @@ function createUpdate(__metadata={}, type) {
         const session_ = await lookup.effect({
             params: {
                 key: {
-                    type: type.TYPE,
+                    type: typeName(type, deps),
                     id
                 },
                 failIfNotFound: true

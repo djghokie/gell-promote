@@ -155,7 +155,9 @@ describe('event bus', function() {
         it('constructs event correctly', async function() {
             const event = await $bus.next({ route: 'nometadata#action', caller, invoke: false }).value;
 
-            assert.strictEqual(event.deps, this.deps);
+            // NOTE: each invocation runs with its own branch of the bus deps
+            assert.notStrictEqual(event.deps, this.deps);
+            assert.strictEqual(event.deps._parent, this.deps);
             assert.strictEqual(event.caller, caller);
         })
 
@@ -457,6 +459,84 @@ describe('event bus', function() {
             const message = await $bus.next(e).value;
 
             assert.strictEqual(message, 'gello');
+        })
+    })
+
+    describe('invocation dependency container', function() {
+        beforeEach(function() {
+            this.deps.define('message', 'gello');
+
+            // defines an invocation scoped dependency, then reads it back
+            events.define = {
+                __metadata: { triggers: { job: {} } },
+                job: event => {
+                    const { deps, params } = event;
+
+                    deps.define('message', params.message);
+
+                    return deps.resolveSingle('message');
+                }
+            }
+
+            events.read = {
+                __metadata: { triggers: { job: {} } },
+                job: event => event.deps.resolveSingle('message')
+            }
+        })
+
+        it('is a branch of the bus deps', async function() {
+            const event = await $bus.next({ route: 'read#job', invoke: false }).value;
+
+            assert.strictEqual(event.deps._parent, this.deps);
+        })
+
+        it('is a branch of the deps passed in', async function() {
+            const deps = this.deps.branch({ message: 'world!' });
+
+            const event = await $bus.next({ route: 'read#job', deps, invoke: false }).value;
+
+            assert.strictEqual(event.deps._parent, deps);
+            assert.strictEqual(event.deps.resolveSingle('message'), 'world!');
+        })
+
+        it('is new for every invocation', async function() {
+            const one = await $bus.next({ route: 'read#job', invoke: false }).value;
+            const two = await $bus.next({ route: 'read#job', invoke: false }).value;
+
+            assert.notStrictEqual(one.deps, two.deps);
+        })
+
+        it('dependencies defined during an invocation stay in the invocation', async function() {
+            const message = await $bus.next({ route: 'define#job', params: { message: 'scoped' } }).value;
+
+            assert.strictEqual(message, 'scoped');
+            assert.strictEqual(this.deps.resolveSingle('message'), 'gello');
+            assert.strictEqual(await $bus.next({ route: 'read#job' }).value, 'gello');
+        })
+
+        it('dependencies defined during an invocation do not change the deps passed in', async function() {
+            const deps = this.deps.branch({ message: 'world!' });
+
+            await $bus.next({ route: 'define#job', params: { message: 'scoped' }, deps }).value;
+
+            assert.strictEqual(deps.resolveSingle('message'), 'world!');
+        })
+
+        it('a nested invocation inherits the outer invocation dependencies', async function() {
+            events.outer = {
+                __metadata: { triggers: { job: {} } },
+                job: async event => {
+                    event.deps.define('message', 'outer');
+
+                    // NOTE: the bus is a generator; a nested dispatch before the outer trigger's first await re-enters
+                    // it ("Generator is already running")
+                    await null;
+
+                    return $bus.next({ route: 'read#job', deps: event.deps }).value;
+                }
+            }
+
+            assert.strictEqual(await $bus.next({ route: 'outer#job' }).value, 'outer');
         })
     })
 })
