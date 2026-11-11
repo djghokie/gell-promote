@@ -99,6 +99,25 @@ describe('gell-document signwell', function() {
         })
     })
 
+    describe('templateIdOf', function() {
+        const ID = 'a6d987c8-4a02-4ef6-9672-b5a886bc9168';
+
+        it('takes an id as given', function() {
+            assert.strictEqual(signwell.templateIdOf(`  ${ID} `), ID);
+        })
+
+        it('reads the id from an edit link', function() {
+            assert.strictEqual(signwell.templateIdOf(`https://www.signwell.com/edit/template/${ID.toUpperCase()}/`), ID);
+            assert.strictEqual(signwell.templateIdOf(`https://www.signwell.com/templates/${ID}?tab=fields`), ID);
+        })
+
+        it('finds no id in a link without one', function() {
+            assert.strictEqual(signwell.templateIdOf('https://www.signwell.com/new_doc/CBnxWrg8U3GVJVIx/'), undefined);
+            assert.strictEqual(signwell.templateIdOf('https://'), undefined);
+            assert.strictEqual(signwell.templateIdOf(''), undefined);
+        })
+    })
+
     describe('createTemplate', function() {
         it('posts the file as a draft with one signer role', async function() {
             const { fetch, requests } = fakeFetch({ status: 201, json: { id: 't-1', name: 'Agreement', status: 'Created', embedded_edit_url: 'https://www.signwell.com/edit/template/t-1/', placeholders: [{ id: '1', name: 'Employee' }], fields: [] } });

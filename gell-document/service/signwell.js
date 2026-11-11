@@ -13,6 +13,8 @@ const crypto = require('crypto');
  *  - createTemplate({ name, filename, file, placeholder }) -> a draft template (see describe) with one signer
  *      role named placeholder, to be finished in the service's editor (editUrl)
  *  - template(id) -> the template (see describe), or undefined if the service has no such template
+ *  - templateIdOf(text) -> the template id in what someone pasted: the id itself, or a SignWell link to the
+ *      template (e.g. https://www.signwell.com/edit/template/<id>/); undefined for a link without one
  *  - createFromTemplate({ templateId, name, signer: { name, email }, placeholder, values: { apiId: value },
  *      redirectUrl, declineRedirectUrl, metadata }) -> { id, signingUrl }
  *  - signingUrl(id) -> a fresh signing URL for the (only) signer
@@ -60,6 +62,29 @@ function describe(template={}) {
     };
 }
 
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/**
+ * The template id in a pasted id or link - links carry it as a UUID in the path (an edit link,
+ * /edit/template/<id>/); a sharing link such as /new_doc/<code>/ does not have it
+ */
+function templateIdOf(text) {
+    const value = String(text || '').trim();
+
+    if (!/^https?:\/\//i.test(value)) return value || undefined;
+
+    let path;
+    try {
+        path = new URL(value).pathname;
+    } catch (e) {
+        return undefined;
+    }
+
+    const match = path.match(UUID);
+
+    return match ? match[0].toLowerCase() : undefined;
+}
+
 function error(message, status) {
     const e = new Error(message);
     e.status = status;
@@ -104,6 +129,7 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
     return {
         name: NAME,
         testMode,
+        templateIdOf,
 
         async createTemplate({ name, filename='document.pdf', file, placeholder='Signer' }) {
             const template = await call('POST', '/document_templates', {
@@ -191,3 +217,4 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
 
 module.exports.NAME = NAME;
 module.exports.describe = describe;
+module.exports.templateIdOf = templateIdOf;

@@ -1,5 +1,7 @@
 const crypto = require('crypto');
 
+const { templateIdOf } = require('./signwell');
+
 /**
  * In-memory e-signature service for tests - the same interface as ./signwell
  *  - templates: the service's templates, by id, as described ({ id, name, status, archived, editUrl,
@@ -32,6 +34,7 @@ module.exports = function fake() {
     return {
         name: NAME,
         testMode: true,
+        templateIdOf,
         templates,
         documents,
         calls,

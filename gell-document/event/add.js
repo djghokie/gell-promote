@@ -8,7 +8,8 @@ const { apply } = require('./refresh');
  *  - params.name: what it is used for (e.g. 'hr.employee.agreement'); params.title: what people call it
  *  - either params.file (base64) with params.filename: a new draft template is created at the service from
  *    the file, with one signer role (params.placeholder, default 'Signer'), to finish in its editor (editUrl)
- *  - or params.serviceTemplateId: a template already built at the service
+ *  - or params.serviceTemplateId: a template already built at the service - its id, or a link to it that the
+ *    service can read the id from (signing.templateIdOf)
  *  - params.addedBy (optional): who added it
  *  - the first ACTIVE template of a name becomes the default
  *  - context.$txn; returns the DOCUMENT#TEMPLATE state, checked (see ./refresh)
@@ -42,10 +43,12 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     const { name, file, filename, placeholder='Signer', addedBy } = params;
     const title = (params.title || '').trim();
-    const serviceTemplateId = (params.serviceTemplateId || '').trim();
+    const pasted = (params.serviceTemplateId || '').trim();
+    const serviceTemplateId = pasted && (signing.templateIdOf ? signing.templateIdOf(pasted) : pasted);
 
     if (!title) throw invalid('the template needs a name');
-    if (!file === !serviceTemplateId) throw invalid('upload a file or give the id of a template at the e-signature service');
+    if (!file === !pasted) throw invalid('upload a file or give the id of a template at the e-signature service');
+    if (pasted && !serviceTemplateId) throw invalid("that link doesn't include a template id - copy the link from the template's edit page, or its id");
 
     const templates_ = await templates.effect({ params: { name }, deps });
 
