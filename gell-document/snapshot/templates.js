@@ -1,20 +1,24 @@
 const template = require('../domain/template');
 
 /**
- * The versions of a document template, newest first
- *  - params.name: the template name (e.g. 'hr.employee.agreement')
+ * The templates for documents of a name: ACTIVE before ARCHIVED, the default first, then by title
+ *  - params.name (optional): e.g. 'hr.employee.agreement'; every template when left out
  *  - returns template states; applications expose them with their own api and roles
  */
 exports.__metadata = {
     name: 'document.templates',
-    description: 'lists the versions of a document template',
+    description: 'lists the templates for documents of a name',
     triggers: {
         effect: {
             params: {
-                name: 'string',
+                name: { type: 'string', optional: true },
             }
         }
     }
+}
+
+function rank(t$) {
+    return (t$.status === 'ACTIVE' ? 0 : 2) + (t$.isDefault ? 0 : 1);
 }
 
 exports.effect = async function({ params={}, deps }) {
@@ -26,7 +30,7 @@ exports.effect = async function({ params={}, deps }) {
     const templates$ = await store.drain('sessions.activity.type', { type: template.TYPE });
 
     return templates$
-        .filter(t$ => t$.name === params.name)
-        .sort((t1, t2) => (t2.version || 0) - (t1.version || 0))
+        .filter(t$ => !params.name || t$.name === params.name)
+        .sort((t1, t2) => rank(t1) - rank(t2) || String(t1.title || '').localeCompare(String(t2.title || '')))
         .map(template.materialize);
 }

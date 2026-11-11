@@ -10,8 +10,11 @@ const crypto = require('crypto');
  *  - webhookId: SignWell signs webhook events with the webhook's id (HMAC-SHA256 of "<type>@<time>")
  *
  * The service interface (also implemented by ./fake):
- *  - create({ name, pdf, filename, signer: { name, email }, fields, redirectUrl, declineRedirectUrl, metadata })
- *      -> { id, signingUrl }
+ *  - createTemplate({ name, filename, file, placeholder }) -> a draft template (see describe) with one signer
+ *      role named placeholder, to be finished in the service's editor (editUrl)
+ *  - template(id) -> the template (see describe), or undefined if the service has no such template
+ *  - createFromTemplate({ templateId, name, signer: { name, email }, placeholder, values: { apiId: value },
+ *      redirectUrl, declineRedirectUrl, metadata }) -> { id, signingUrl }
  *  - signingUrl(id) -> a fresh signing URL for the (only) signer
  *  - cancel(id): stops signing; a document that is gone already is fine
  *  - download(id) -> Uint8Array of the completed PDF, audit page included
@@ -19,9 +22,16 @@ const crypto = require('crypto');
  *  - parse(payload) -> { status: 'COMPLETED' | 'DECLINED' | 'EXPIRED' | 'CANCELED' | undefined, serviceDocumentId,
  *      requestId, testMode, reason } for a verified webhook event; throws a 401 error if it does not verify
  *
+ * A template as described: { id, name, status, archived, editUrl, placeholders: [{ id, name }],
+ *   fields: [{ apiId, type, placeholder }] } - status is SignWell's ('Created' while a draft, then 'Available')
+ *
  * WIP: how long an embedded signing URL stays valid isn't documented - signingUrl() fetches a fresh one each time
  * WIP: SignWell documents the embedded signing URL inside its iframe script; a full-page redirect is assumed
  *      to work the same - check on a phone (sc-525)
+ * WIP: unverified against a live account (the API reference only): that a draft template can be created with
+ *      no fields, that a draft reports status 'Created', that a document from a template returns the
+ *      recipients' embedded_signing_url like a document from a file, and how an unknown template_fields api_id
+ *      is treated (only the template's own text fields are sent - see ../event/request)
  */
 const NAME = 'SIGNWELL';
 
@@ -36,6 +46,19 @@ const STATUSES = {
     document_expired: 'EXPIRED',
     document_canceled: 'CANCELED',
 };
+
+// SignWell's template: fields are one array per file
+function describe(template={}) {
+    return {
+        id: template.id,
+        name: template.name,
+        status: template.status,
+        archived: !!template.archived,
+        editUrl: template.embedded_edit_url || undefined,
+        placeholders: (template.placeholders || []).map(p => ({ id: p.id, name: p.name })),
+        fields: [].concat(...(template.fields || [])).map(f => ({ apiId: f.api_id, type: f.type, placeholder: f.placeholder_name })),
+    };
+}
 
 function error(message, status) {
     const e = new Error(message);
@@ -82,9 +105,30 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
         name: NAME,
         testMode,
 
-        async create({ name, pdf, filename='document.pdf', signer, fields=[], redirectUrl, declineRedirectUrl, metadata={} }) {
-            const document = await call('POST', '/documents', {
+        async createTemplate({ name, filename='document.pdf', file, placeholder='Signer' }) {
+            const template = await call('POST', '/document_templates', {
                 body: {
+                    name,
+                    // finished in SignWell's editor: the fields are placed there
+                    draft: true,
+                    files: [{ name: filename, file_base64: Buffer.from(file).toString('base64') }],
+                    placeholders: [{ id: '1', name: placeholder }],
+                }
+            });
+
+            return describe(template);
+        },
+
+        async template(id) {
+            const template = await call('GET', `/document_templates/${id}`, { allowNotFound: true });
+
+            return template ? describe(template) : undefined;
+        },
+
+        async createFromTemplate({ templateId, name, signer, placeholder, values={}, redirectUrl, declineRedirectUrl, metadata={} }) {
+            const document = await call('POST', '/document_templates/documents', {
+                body: {
+                    template_id: templateId,
                     name,
                     test_mode: testMode,
                     draft: false,
@@ -92,24 +136,11 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
                     embedded_signing_notifications: false,
                     reminders: false,
                     allow_decline: true,
-                    allow_reassign: false,
                     expires_in: EXPIRES_IN_DAYS,
                     ...(redirectUrl ? { redirect_url: redirectUrl } : {}),
                     ...(declineRedirectUrl ? { decline_redirect_url: declineRedirectUrl } : {}),
-                    files: [{ name: filename, file_base64: Buffer.from(pdf).toString('base64') }],
-                    recipients: [{ id: '1', name: signer.name, email: signer.email, send_email: false }],
-                    fields: [fields.map((field, i) => ({
-                        api_id: `${field.type}_${i + 1}`,
-                        type: field.type,
-                        page: field.page,
-                        x: Math.round(field.x),
-                        y: Math.round(field.y),
-                        width: Math.round(field.width),
-                        height: Math.round(field.height),
-                        recipient_id: '1',
-                        required: true,
-                        ...(field.type === 'date' ? { lock_sign_date: true } : {}),
-                    }))],
+                    recipients: [{ id: '1', placeholder_name: placeholder, name: signer.name, email: signer.email, send_email: false }],
+                    template_fields: Object.entries(values).map(([apiId, value]) => ({ api_id: apiId, value: String(value) })),
                     metadata,
                 }
             });
@@ -159,3 +190,4 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
 }
 
 module.exports.NAME = NAME;
+module.exports.describe = describe;

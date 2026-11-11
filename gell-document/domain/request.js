@@ -5,8 +5,9 @@ const TYPE = 'DOCUMENT#REQUEST';
 
 /**
  * A request for a signature through an e-signature service (SignWell) - see ../event/request
- *  - parentId/parentType: the record it is signed for (an employee FILE, ...); name: the template name
- *  - title/text/hash/values: exactly what was sent to be signed (rendered from templateId/templateVersion)
+ *  - parentId/parentType: the record it is signed for (an employee FILE, ...); name: what the document is
+ *  - templateId: the DOCUMENT#TEMPLATE it was created from; title: the template's title at the time
+ *  - values: the merge field values sent to the template's text fields
  *  - data: application values kept with the signature (e.g. { hourlyRate })
  *  - service/serviceDocumentId: the e-signature service and its id for the document
  *  - signedId: the DOCUMENT#SIGNED written when the service reports the document completed
@@ -35,13 +36,7 @@ const model = {
         name: 'string',
         parentType: 'string',
         templateId: 'string',
-        templateVersion: 'number',
         title: 'string',
-        text: 'text',
-        hash: {
-            type: 'string',
-            description: 'SHA-256 of the title and text sent (../lib/signature)'
-        },
         values: 'object',
         data: 'object',
         signer: {

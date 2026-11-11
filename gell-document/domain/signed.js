@@ -6,13 +6,14 @@ const TYPE = 'DOCUMENT#SIGNED';
 /**
  * A document as it was signed - immutable once saved
  *  - parentId/parentType: the record it was signed for (an employee FILE, a CONTRACT, ...)
- *  - name: the template name (see ./template); templateId/templateVersion: the exact version signed
- *  - text is the exact rendered text that was signed; values are the merge field values it was rendered with
- *  - data: application values to keep with the signature (e.g. { hourlyRate }), not shown in the text
- *  - signature.hash is the SHA-256 of the title and text (see ../lib/signature), so a later change shows
+ *  - name: what the document is (see ./template); templateId: the DOCUMENT#TEMPLATE it was signed from;
+ *    title: the template's title at the time; values: the merge field values filled in
+ *  - data: application values to keep with the signature (e.g. { hourlyRate })
  *  - signed through an e-signature service (../event/request): service/serviceDocumentId/requestId, and the
- *    service's completed PDF (with its audit page) in documentStorage at pdfKey, with its SHA-256 in pdfHash
- *  - typed-name signatures (../event/sign) have no PDF
+ *    service's completed PDF (with its audit page) in documentStorage at pdfKey, with its SHA-256 in pdfHash -
+ *    the PDF is the record of what was signed
+ *  - NOTE: copies signed by typed name, before templates moved to the e-signature service, have no PDF: they
+ *    keep templateVersion, the rendered text, and signature.hash (SHA-256 of title and text, ../lib/signature)
  */
 const STATUSES = {
     SIGNED: { description: 'signed' },
@@ -39,7 +40,7 @@ const model = {
         text: 'text',
         values: {
             type: 'object',
-            description: 'the merge field values the text was rendered with'
+            description: 'the merge field values filled in'
         },
         data: {
             type: 'object',

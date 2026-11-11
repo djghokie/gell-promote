@@ -19,7 +19,6 @@
     "gell-schedule": "^0.3.2",
     "gell-session": "^1.10.0",
     "gell-web": "^0.5.0",
-    "pdf-lib": "^1.17.1",
     "require-all": "^3.0.0"
   }
 }

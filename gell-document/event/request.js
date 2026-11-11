@@ -1,25 +1,27 @@
 const _ = require('lodash');
 
 const request = require('../domain/request');
+const template = require('../domain/template');
 const { invalid } = require('../lib/errors');
-const pdf = require('../lib/pdf');
-const { hash } = require('../lib/signature');
-const render = require('../snapshot/render');
+const choose = require('../snapshot/choose');
 const requests = require('../snapshot/requests');
 const { cancelRequest } = require('./cancel');
+const { check } = require('./refresh');
 
 /**
- * Asks for a signature on the published version of a document template through the e-signature service
- * (the `signing` dependency, e.g. ../service/signwell), and returns where the signer signs
- *  - params.name: the template name; params.values: the merge field values
+ * Asks for a signature on a document from a template at the e-signature service (the `signing` dependency,
+ * e.g. ../service/signwell), and returns where the signer signs
+ *  - params.name: what the document is (e.g. 'hr.employee.agreement')
+ *  - params.templateId (optional): the DOCUMENT#TEMPLATE chosen for the record; the default template otherwise
+ *  - params.values: merge field values { field: value } - sent for the template's text fields whose API id is
+ *    the field name; the template's other fields are the signer's
  *  - params.signer: { name, email }; params.data (optional): application values kept with the signature
  *  - params.redirectUrl / declineRedirectUrl (optional): where the service sends the signer afterwards
  *  - params.label (optional): what the document is called in error messages (default 'document')
  *  - context.parent_: the record it is signed for (a State, or a { type, id } key); context.$txn
- *  - context.template_ (optional): the PUBLISHED version, when the caller already loaded it
- *  - a PENDING request for the same version, data and signer is reused (the signer left and came back);
- *    any other PENDING request for the record is cancelled first, so only one can be signed
- *  - the document is rendered to a PDF (../lib/pdf) with the signature and date fields after the text
+ *  - the template is checked at the service first (it may have been edited there since it was added)
+ *  - a PENDING request from the same template, with the same data and signer, is reused (the signer left and
+ *    came back); any other PENDING request for the record is cancelled first, so only one can be signed
  *  - returns { request_, signingUrl }; the service reports the outcome to ./webhook
  *
  * WIP: the document is created at the service before the transaction commits - if the transaction fails the
@@ -27,11 +29,12 @@ const { cancelRequest } = require('./cancel');
  */
 exports.__metadata = {
     name: 'document.request.create',
-    description: 'asks for a signature on a document through the e-signature service',
+    description: 'asks for a signature on a document from a template at the e-signature service',
     triggers: {
         effect: {
             params: {
                 name: 'string',
+                templateId: { type: 'string', optional: true },
                 values: 'object',
                 signer: 'object',
                 data: { type: 'object', optional: true },
@@ -51,32 +54,29 @@ function keyOf(record) {
     return typeof record.snapshotPartial === 'function' ? record.snapshotPartial(['type', 'id']) : record;
 }
 
-function filenameOf(title) {
-    return `${String(title || 'document').replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'document'}.pdf`;
-}
-
 exports.effect = async function({ params={}, context={}, deps }) {
     const { logger, signing } = deps.resolve('logger', 'signing');
 
     logger.info('executing effect (name="document.request.create")');
 
-    const { name, values, signer, data, redirectUrl, declineRedirectUrl, label='document' } = params;
+    const { name, templateId: chosenId, values={}, signer, data, redirectUrl, declineRedirectUrl, label='document' } = params;
     const { parent_, $txn } = context;
 
-    const rendered = await render.effect({ params: { name, values }, context: { template_: context.template_ }, deps });
+    const template_ = await choose.effect({ params: { name, id: chosenId }, deps });
 
-    if (!rendered) throw invalid(`the ${label} is not ready yet`);
+    if (!template_ || !template.ready(template_)) throw invalid(`the ${label} is not ready yet`);
 
-    const { template_, title, text } = rendered;
-    const templateVersion = template_.snapshotAttribute('version');
+    const t$ = template_.snapshotPartial(['id', 'title', 'service', 'serviceTemplateId']);
+
+    if (t$.service !== signing.name) throw invalid(`the ${label} template is at another e-signature service (${t$.service})`);
 
     const pending_ = (await requests.effect({ params: { name }, context: { parent_ }, deps }))
         .filter(r_ => r_.snapshotAttribute('status') === 'PENDING');
 
     const reusable_ = pending_.find(r_ => {
-        const r$ = r_.snapshotPartial(['templateVersion', 'data', 'signer', 'service']);
+        const r$ = r_.snapshotPartial(['templateId', 'data', 'signer', 'service']);
 
-        return r$.templateVersion === templateVersion &&
+        return r$.templateId === t$.id &&
             r$.service === signing.name &&
             _.isEqual(r$.data || {}, data || {}) &&
             (r$.signer || {}).email === signer.email &&
@@ -91,6 +91,19 @@ exports.effect = async function({ params={}, context={}, deps }) {
         return { request_: reusable_, signingUrl };
     }
 
+    const described = await signing.template(t$.serviceTemplateId);
+    const problems = check(described);
+
+    if (problems.length > 0) {
+        logger.warn(`document template is not ready at the service (id=${t$.id}; problems=${problems.join('; ')})`);
+        throw invalid(`the ${label} is not ready yet`);
+    }
+
+    // only the template's own text fields: the rest of the values have nowhere to go
+    const apiIds = described.fields.filter(f => f.type === 'text').map(f => f.apiId);
+    const filled = _.pick(values, apiIds);
+    const [placeholder] = described.placeholders;
+
     for (const stale_ of pending_) await cancelRequest(stale_, 'REPLACED', $txn, deps);
 
     const parent = keyOf(parent_);
@@ -99,12 +112,9 @@ exports.effect = async function({ params={}, context={}, deps }) {
         parentId: parent.id,
         parentType: parent.type,
         name,
-        templateId: template_.snapshotAttribute('id'),
-        templateVersion,
-        title,
-        text,
-        hash: hash(title, text),
-        values,
+        templateId: t$.id,
+        title: t$.title,
+        values: filled,
         ...(data ? { data } : {}),
         signer: { name: signer.name, email: signer.email },
         service: signing.name,
@@ -113,14 +123,12 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     const requestId = request_.snapshotAttribute('id');
 
-    const { bytes, fields } = await pdf.render({ title, text, signerName: signer.name });
-
-    const created = await signing.create({
-        name: title,
-        pdf: bytes,
-        filename: filenameOf(title),
+    const created = await signing.createFromTemplate({
+        templateId: t$.serviceTemplateId,
+        name: t$.title,
         signer,
-        fields,
+        placeholder: placeholder.name,
+        values: filled,
         redirectUrl,
         declineRedirectUrl,
         metadata: { requestId, name },
@@ -130,7 +138,7 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     $txn.next({ operation: 'put', item: request_ });
 
-    logger.info(`created signature request (id=${requestId}; name=${name}; version=${templateVersion}; serviceDocumentId=${created.id})`);
+    logger.info(`created signature request (id=${requestId}; name=${name}; templateId=${t$.id}; serviceDocumentId=${created.id})`);
 
     return { request_, signingUrl: created.signingUrl };
 }

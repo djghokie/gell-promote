@@ -1,9 +1,7 @@
 const assert = require('assert');
 const crypto = require('crypto');
 
-const { PDFDocument } = require('pdf-lib');
-
-const pdf = require('../../gell-document/lib/pdf');
+const { check } = require('../../gell-document/event/refresh');
 const signwell = require('../../gell-document/service/signwell');
 
 const WEBHOOK_ID = 'webhook-123';
@@ -36,29 +34,31 @@ function fakeFetch(...responses) {
     return { fetch, requests };
 }
 
-describe('gell-document pdf', function() {
-    it('renders a PDF with a signature and date field', async function() {
-        const { bytes, fields } = await pdf.render({ title: 'Agreement', text: 'Hello Dee.\n\nYou earn $25.00 per hour.', signerName: 'Dee Driver' });
+describe('gell-document template check', function() {
+    const ready = {
+        id: 't-1',
+        status: 'Available',
+        archived: false,
+        placeholders: [{ id: '1', name: 'Employee' }],
+        fields: [{ apiId: 'fullName', type: 'text' }, { apiId: 'Signature_1', type: 'signature' }],
+    };
 
-        assert.strictEqual(Buffer.from(bytes).subarray(0, 5).toString(), '%PDF-');
-        assert.deepStrictEqual(fields.map(f => f.type), ['signature', 'date']);
-        assert.ok(fields.every(f => f.page === 1 && f.x >= 0 && f.y >= 0));
+    it('finds nothing wrong with a finished template with one signer and a signature field', function() {
+        assert.deepStrictEqual(check(ready), []);
     })
 
-    it('puts the signature block on a new page when the text fills the page', async function() {
-        const text = Array.from({ length: 80 }, (_, i) => `Paragraph ${i + 1} of a long agreement.`).join('\n\n');
-
-        const { bytes, fields } = await pdf.render({ title: 'Agreement', text, signerName: 'Dee Driver' });
-        const document = await PDFDocument.load(bytes);
-
-        assert.ok(document.getPageCount() > 1);
-        assert.strictEqual(fields[0].page, document.getPageCount());
+    it('reports a template the service no longer has', function() {
+        assert.match(check(undefined)[0], /not found/);
     })
 
-    it('draws characters the standard fonts cannot encode', async function() {
-        const { bytes } = await pdf.render({ title: 'Agreement – “v2”', text: 'Pay… ✓ 🚐', signerName: 'Dee' });
+    it('reports a draft, an archived template, signer roles and a missing signature field', function() {
+        const problems = check({ ...ready, status: 'Created', archived: true, placeholders: [], fields: [] });
 
-        assert.ok(bytes.length > 0);
+        assert.strictEqual(problems.length, 4);
+        assert.ok(problems.some(p => /draft/.test(p)));
+        assert.ok(problems.some(p => /archived/.test(p)));
+        assert.ok(problems.some(p => /exactly one signer role \(it has 0\)/.test(p)));
+        assert.ok(problems.some(p => /signature field/.test(p)));
     })
 })
 
@@ -99,16 +99,78 @@ describe('gell-document signwell', function() {
         })
     })
 
-    describe('create', function() {
-        it('posts the PDF, the signer and the fields for embedded signing', async function() {
-            const { fetch, requests } = fakeFetch({ json: { id: 'doc-1', recipients: [{ id: '1', embedded_signing_url: 'https://sign/doc-1' }] } });
+    describe('createTemplate', function() {
+        it('posts the file as a draft with one signer role', async function() {
+            const { fetch, requests } = fakeFetch({ status: 201, json: { id: 't-1', name: 'Agreement', status: 'Created', embedded_edit_url: 'https://www.signwell.com/edit/template/t-1/', placeholders: [{ id: '1', name: 'Employee' }], fields: [] } });
             const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
 
-            const result = await service.create({
+            const result = await service.createTemplate({ name: 'Agreement', filename: 'agreement.docx', file: Buffer.from('word'), placeholder: 'Employee' });
+
+            const [request] = requests;
+
+            assert.strictEqual(request.method, 'POST');
+            assert.ok(request.url.endsWith('/api/v1/document_templates'));
+            assert.strictEqual(request.body.draft, true);
+            assert.deepStrictEqual(request.body.placeholders, [{ id: '1', name: 'Employee' }]);
+            assert.strictEqual(request.body.files[0].name, 'agreement.docx');
+            assert.strictEqual(Buffer.from(request.body.files[0].file_base64, 'base64').toString(), 'word');
+            assert.deepStrictEqual(result, {
+                id: 't-1',
                 name: 'Agreement',
-                pdf: Buffer.from('%PDF-1.7'),
+                status: 'Created',
+                archived: false,
+                editUrl: 'https://www.signwell.com/edit/template/t-1/',
+                placeholders: [{ id: '1', name: 'Employee' }],
+                fields: [],
+            });
+        })
+
+        it('reports an API error as a bad gateway with the service status', async function() {
+            const { fetch } = fakeFetch({ status: 422, json: { errors: { files: ['bad'] } } });
+            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
+
+            await assert.rejects(service.createTemplate({ name: 'x', file: Buffer.from('') }), e => e.status === 502 && /status=422/.test(e.message));
+        })
+    })
+
+    describe('template', function() {
+        it('describes the fields of every file with their signer role', async function() {
+            const { fetch, requests } = fakeFetch({ json: {
+                id: 't-1', status: 'Available', placeholders: [{ id: '1', name: 'Employee', signing_order: 1 }],
+                fields: [[{ api_id: 'fullName', type: 'text', placeholder_name: 'Employee' }], [{ api_id: 'Signature_1', type: 'signature', placeholder_name: 'Employee' }]],
+            } });
+            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
+
+            const result = await service.template('t-1');
+
+            assert.strictEqual(requests[0].method, 'GET');
+            assert.ok(requests[0].url.endsWith('/api/v1/document_templates/t-1'));
+            assert.deepStrictEqual(result.placeholders, [{ id: '1', name: 'Employee' }]);
+            assert.deepStrictEqual(result.fields, [
+                { apiId: 'fullName', type: 'text', placeholder: 'Employee' },
+                { apiId: 'Signature_1', type: 'signature', placeholder: 'Employee' },
+            ]);
+        })
+
+        it('is undefined for a template the service does not have', async function() {
+            const { fetch } = fakeFetch({ status: 404 });
+            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
+
+            assert.strictEqual(await service.template('gone'), undefined);
+        })
+    })
+
+    describe('createFromTemplate', function() {
+        it('posts the template, the signer as its role and the field values for embedded signing', async function() {
+            const { fetch, requests } = fakeFetch({ status: 201, json: { id: 'doc-1', recipients: [{ id: '1', embedded_signing_url: 'https://sign/doc-1' }] } });
+            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
+
+            const result = await service.createFromTemplate({
+                templateId: 't-1',
+                name: 'Agreement',
                 signer: { name: 'Dee Driver', email: 'dee@example.com' },
-                fields: [{ type: 'signature', page: 1, x: 72.4, y: 500, width: 220, height: 40 }],
+                placeholder: 'Employee',
+                values: { fullName: 'Dee Driver', hourlyRate: '$25.00' },
                 redirectUrl: 'https://ops/back',
                 metadata: { requestId: 'req-1' },
             });
@@ -117,22 +179,24 @@ describe('gell-document signwell', function() {
 
             assert.deepStrictEqual(result, { id: 'doc-1', signingUrl: 'https://sign/doc-1' });
             assert.strictEqual(request.method, 'POST');
-            assert.ok(request.url.endsWith('/api/v1/documents'));
+            assert.ok(request.url.endsWith('/api/v1/document_templates/documents'));
             assert.strictEqual(request.headers['X-Api-Key'], 'key');
+            assert.strictEqual(request.body.template_id, 't-1');
             assert.strictEqual(request.body.test_mode, true, 'test mode unless turned off');
             assert.strictEqual(request.body.embedded_signing, true);
-            assert.strictEqual(request.body.recipients[0].send_email, false);
-            assert.strictEqual(request.body.fields[0][0].x, 72);
-            assert.strictEqual(request.body.fields[0][0].recipient_id, '1');
+            assert.deepStrictEqual(request.body.recipients, [{ id: '1', placeholder_name: 'Employee', name: 'Dee Driver', email: 'dee@example.com', send_email: false }]);
+            assert.deepStrictEqual(request.body.template_fields, [{ api_id: 'fullName', value: 'Dee Driver' }, { api_id: 'hourlyRate', value: '$25.00' }]);
+            assert.strictEqual(request.body.redirect_url, 'https://ops/back');
             assert.deepStrictEqual(request.body.metadata, { requestId: 'req-1' });
-            assert.strictEqual(Buffer.from(request.body.files[0].file_base64, 'base64').toString(), '%PDF-1.7');
         })
 
-        it('reports an API error as a bad gateway with the service status', async function() {
-            const { fetch } = fakeFetch({ status: 422, json: { errors: { files: ['bad'] } } });
-            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
+        it('falls back to the signing url when there is no embedded one', async function() {
+            const { fetch } = fakeFetch({ json: { id: 'doc-1', recipients: [{ id: '1', signing_url: 'https://sign/doc-1' }] } });
+            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch, testMode: false });
 
-            await assert.rejects(service.create({ name: 'x', pdf: Buffer.from(''), signer: {}, fields: [] }), e => e.status === 502 && /status=422/.test(e.message));
+            const result = await service.createFromTemplate({ templateId: 't-1', name: 'x', signer: {}, placeholder: 'Employee' });
+
+            assert.strictEqual(result.signingUrl, 'https://sign/doc-1');
         })
     })
 
