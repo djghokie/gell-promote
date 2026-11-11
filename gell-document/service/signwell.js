@@ -15,17 +15,20 @@ const crypto = require('crypto');
  *  - template(id) -> the template (see describe), or undefined if the service has no such template
  *  - templateIdOf(text) -> the template id in what someone pasted: the id itself, or a SignWell link to the
  *      template (e.g. https://www.signwell.com/edit/template/<id>/); undefined for a link without one
- *  - createFromTemplate({ templateId, name, signer: { name, email }, placeholder, values: { apiId: value },
- *      redirectUrl, declineRedirectUrl, metadata }) -> { id, signingUrl }
- *  - signingUrl(id) -> a fresh signing URL for the (only) signer
+ *  - createFromTemplate({ templateId, name, signer: { name, email }, placeholder, cosigners: [{ placeholder, name,
+ *      email }], values: { apiId: value }, redirectUrl, declineRedirectUrl, metadata }) -> { id, signingUrl }
+ *      - the signer signs first, then each cosigner in order (signing order); signingUrl is the signer's
+ *  - signingUrl(id, { email }) -> a fresh signing URL for the recipient with that email (the first one otherwise)
  *  - cancel(id): stops signing; a document that is gone already is fine
  *  - download(id) -> Uint8Array of the completed PDF, audit page included
  *  - remove(id): deletes the document from the service
- *  - parse(payload) -> { status: 'COMPLETED' | 'DECLINED' | 'EXPIRED' | 'CANCELED' | undefined, serviceDocumentId,
- *      requestId, testMode, reason } for a verified webhook event; throws a 401 error if it does not verify
+ *  - parse(payload) -> { status: 'SIGNED' | 'COMPLETED' | 'DECLINED' | 'EXPIRED' | 'CANCELED' | undefined,
+ *      serviceDocumentId, requestId, testMode, reason, signerEmail } for a verified webhook event; throws a 401
+ *      error if it does not verify - SIGNED is one recipient signing (signerEmail), COMPLETED all of them
  *
- * A template as described: { id, name, status, archived, editUrl, placeholders: [{ id, name }],
- *   fields: [{ apiId, type, placeholder }] } - status is SignWell's ('Created' while a draft, then 'Available')
+ * A template as described: { id, name, status, archived, editUrl, placeholders: [{ id, name, assigned }],
+ *   fields: [{ apiId, type, placeholder }] } - status is SignWell's ('Created' while a draft, then 'Available');
+ *   assigned: { name, email } of a role with a preassigned recipient (the same person on every document)
  *
  * WIP: how long an embedded signing URL stays valid isn't documented - signingUrl() fetches a fresh one each time
  * WIP: SignWell documents the embedded signing URL inside its iframe script; a full-page redirect is assumed
@@ -33,7 +36,9 @@ const crypto = require('crypto');
  * WIP: unverified against a live account (the API reference only): that a draft template can be created with
  *      no fields, that a draft reports status 'Created', that a document from a template returns the
  *      recipients' embedded_signing_url like a document from a file, and how an unknown template_fields api_id
- *      is treated (only the template's own text fields are sent - see ../event/request)
+ *      is treated (only the template's own text fields are sent - see ../event/request), that signing order stops
+ *      a cosigner's embedded URL working before the signer signs, and that a GET returns a usable embedded URL
+ *      for each recipient
  */
 const NAME = 'SIGNWELL';
 
@@ -43,6 +48,7 @@ const BASE_URL = 'https://www.signwell.com/api/v1';
 const EXPIRES_IN_DAYS = 30;
 
 const STATUSES = {
+    document_signed: 'SIGNED',
     document_completed: 'COMPLETED',
     document_declined: 'DECLINED',
     document_expired: 'EXPIRED',
@@ -57,7 +63,11 @@ function describe(template={}) {
         status: template.status,
         archived: !!template.archived,
         editUrl: template.embedded_edit_url || undefined,
-        placeholders: (template.placeholders || []).map(p => ({ id: p.id, name: p.name })),
+        placeholders: (template.placeholders || []).map(p => ({
+            id: p.id,
+            name: p.name,
+            ...(p.preassigned_recipient_email ? { assigned: { name: p.preassigned_recipient_name || p.preassigned_recipient_email, email: p.preassigned_recipient_email } } : {}),
+        })),
         fields: [].concat(...(template.fields || [])).map(f => ({ apiId: f.api_id, type: f.type, placeholder: f.placeholder_name })),
     };
 }
@@ -120,8 +130,12 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
         return response.json();
     }
 
-    function urlOf(document) {
-        const [recipient] = (document && document.recipients) || [];
+    // the recipient with email (the first recipient when no email is given)
+    function urlOf(document, email) {
+        const recipients = (document && document.recipients) || [];
+        const recipient = email
+            ? recipients.find(r => String(r.email || '').toLowerCase() === String(email).toLowerCase())
+            : recipients[0];
 
         return recipient && (recipient.embedded_signing_url || recipient.signing_url);
     }
@@ -151,7 +165,7 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
             return template ? describe(template) : undefined;
         },
 
-        async createFromTemplate({ templateId, name, signer, placeholder, values={}, redirectUrl, declineRedirectUrl, metadata={} }) {
+        async createFromTemplate({ templateId, name, signer, placeholder, cosigners=[], values={}, redirectUrl, declineRedirectUrl, metadata={} }) {
             const document = await call('POST', '/document_templates/documents', {
                 body: {
                     template_id: templateId,
@@ -165,7 +179,12 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
                     expires_in: EXPIRES_IN_DAYS,
                     ...(redirectUrl ? { redirect_url: redirectUrl } : {}),
                     ...(declineRedirectUrl ? { decline_redirect_url: declineRedirectUrl } : {}),
-                    recipients: [{ id: '1', placeholder_name: placeholder, name: signer.name, email: signer.email, send_email: false }],
+                    // the signer first, then the cosigners - each waits for the one before (signing order)
+                    ...(cosigners.length > 0 ? { apply_signing_order: true } : {}),
+                    recipients: [
+                        { id: '1', placeholder_name: placeholder, name: signer.name, email: signer.email, send_email: false },
+                        ...cosigners.map((c, i) => ({ id: String(i + 2), placeholder_name: c.placeholder, name: c.name, email: c.email, send_email: false })),
+                    ],
                     template_fields: Object.entries(values).map(([apiId, value]) => ({ api_id: apiId, value: String(value) })),
                     metadata,
                 }
@@ -174,8 +193,8 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
             return { id: document.id, signingUrl: urlOf(document) };
         },
 
-        async signingUrl(id) {
-            return urlOf(await call('GET', `/documents/${id}`));
+        async signingUrl(id, { email }={}) {
+            return urlOf(await call('GET', `/documents/${id}`), email);
         },
 
         async cancel(id) {
@@ -210,6 +229,8 @@ module.exports = function signwell({ apiKey, webhookId, testMode=true, baseUrl=B
                 requestId: object.metadata && object.metadata.requestId,
                 testMode: !!object.test_mode,
                 reason: object.decline_reason || undefined,
+                // the recipient who signed (document_signed), viewed or declined
+                signerEmail: (event.related_signer && event.related_signer.email) || undefined,
             };
         },
     };

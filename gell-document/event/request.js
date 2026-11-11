@@ -20,8 +20,11 @@ const { check } = require('./refresh');
  *  - params.label (optional): what the document is called in error messages (default 'document')
  *  - context.parent_: the record it is signed for (a State, or a { type, id } key); context.$txn
  *  - the template is checked at the service first (it may have been edited there since it was added)
+ *  - the signer takes the template's open role; roles with a preassigned recipient (e.g. the company) are
+ *    cosigners, who sign after the signer (signing order) - the request is COMPLETED once everyone signed
  *  - a PENDING request from the same template, with the same data and signer, is reused (the signer left and
- *    came back); any other PENDING request for the record is cancelled first, so only one can be signed
+ *    came back); any other PENDING request for the record is cancelled first, so only one can be signed - but
+ *    not one the signer has signed that waits for its cosigners (refused)
  *  - returns { request_, signingUrl }; the service reports the outcome to ./webhook
  *
  * WIP: the document is created at the service before the transaction commits - if the transaction fails the
@@ -73,6 +76,9 @@ exports.effect = async function({ params={}, context={}, deps }) {
     const pending_ = (await requests.effect({ params: { name }, context: { parent_ }, deps }))
         .filter(r_ => r_.snapshotAttribute('status') === 'PENDING');
 
+    // signed by the signer, waiting for the cosigners: not to be replaced (cancel it first to ask again)
+    if (pending_.some(r_ => r_.snapshotAttribute('signerSignedTs'))) throw invalid(`the ${label} is already signed and waiting for a counter-signature`);
+
     const reusable_ = pending_.find(r_ => {
         const r$ = r_.snapshotPartial(['templateId', 'data', 'signer', 'service']);
 
@@ -84,7 +90,7 @@ exports.effect = async function({ params={}, context={}, deps }) {
     });
 
     if (reusable_) {
-        const signingUrl = await signing.signingUrl(reusable_.snapshotAttribute('serviceDocumentId'));
+        const signingUrl = await signing.signingUrl(reusable_.snapshotAttribute('serviceDocumentId'), { email: signer.email });
 
         logger.info(`reusing signature request (id=${reusable_.snapshotAttribute('id')})`);
 
@@ -102,7 +108,10 @@ exports.effect = async function({ params={}, context={}, deps }) {
     // only the template's own text fields: the rest of the values have nowhere to go
     const apiIds = described.fields.filter(f => f.type === 'text').map(f => f.apiId);
     const filled = _.pick(values, apiIds);
-    const [placeholder] = described.placeholders;
+    const placeholder = described.placeholders.find(p => !p.assigned);
+    const cosigners = described.placeholders
+        .filter(p => p.assigned)
+        .map(p => ({ placeholder: p.name, name: p.assigned.name, email: p.assigned.email }));
 
     for (const stale_ of pending_) await cancelRequest(stale_, 'REPLACED', $txn, deps);
 
@@ -117,6 +126,7 @@ exports.effect = async function({ params={}, context={}, deps }) {
         values: filled,
         ...(data ? { data } : {}),
         signer: { name: signer.name, email: signer.email },
+        ...(cosigners.length > 0 ? { cosigners: cosigners.map(c => ({ name: c.name, email: c.email })) } : {}),
         service: signing.name,
         status: 'PENDING',
     });
@@ -128,6 +138,7 @@ exports.effect = async function({ params={}, context={}, deps }) {
         name: t$.title,
         signer,
         placeholder: placeholder.name,
+        cosigners,
         values: filled,
         redirectUrl,
         declineRedirectUrl,

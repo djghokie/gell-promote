@@ -11,7 +11,8 @@ const TYPE = 'DOCUMENT#TEMPLATE';
  *    and at most one ACTIVE template per name is the default (isDefault)
  *  - title: what people call it (e.g. 'Driver Employment Agreement')
  *  - service/serviceTemplateId: the service and its id for the template
- *  - checked from the service (../event/refresh): serviceStatus, editUrl, placeholders (the signer roles),
+ *  - checked from the service (../event/refresh): serviceStatus, editUrl, placeholders (the signer roles: the
+ *    one left open is the signer's; the others have a preassigned recipient who counter-signs, assigned),
  *    fields ({ apiId, type, placeholder }), problems (why it can't be signed yet; empty when ready), checkedTs
  *  - text fields whose API id is a merge field name are filled in when a document is requested (../event/request)
  */
@@ -50,7 +51,7 @@ const model = {
         },
         placeholders: {
             type: 'array',
-            description: 'the signer roles: [{ id, name }]'
+            description: 'the signer roles: [{ id, name, assigned: { name, email } }] - assigned for a preassigned recipient (a cosigner)'
         },
         fields: {
             type: 'array',

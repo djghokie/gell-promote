@@ -27,8 +27,10 @@ them the default, so one application can have several documents and a choice of 
 ```
 application action ──► event/request ──► signing.createFromTemplate ─────────► { signingUrl }
                                                                                     │ signer signs
-service webhook ──► event/webhook ──► event/complete ──► documentStorage.put(PDF)    ▼
+service webhook ──► event/webhook ──► event/complete ──► documentStorage.put(PDF)    ▼ (then any cosigners)
                                   │                  └─► documentHooks[name].signed (application)
+                                  ├─► signerSignedTs ──► documentHooks[name].signerSigned (signer signed;
+                                  │                       cosigners next)
                                   └─► event/close (declined / expired / cancelled)
 ```
 
@@ -36,16 +38,21 @@ Dependencies:
 
 - `signing` - the service: `service/signwell` (`{ apiKey, webhookId, testMode }`) or `service/fake` for tests.
   Interface: `name`, `testMode`, `createTemplate({ name, filename, file, placeholder }) → template` (a draft),
-  `template(id) → template | undefined`, `createFromTemplate({ templateId, name, signer, placeholder, values,
-  redirectUrl, declineRedirectUrl, metadata }) → { id, signingUrl }`, `signingUrl(id)`, `cancel(id)`,
-  `download(id) → bytes`, `remove(id)`, `parse(payload) → { status, type, serviceDocumentId, requestId, testMode,
-  reason }` (throws a 401 error when the event doesn't verify). A template is `{ id, name, status, archived,
-  editUrl, placeholders: [{ id, name }], fields: [{ apiId, type, placeholder }] }`.
+  `template(id) → template | undefined`, `createFromTemplate({ templateId, name, signer, placeholder, cosigners,
+  values, redirectUrl, declineRedirectUrl, metadata }) → { id, signingUrl }`, `signingUrl(id, { email })`,
+  `cancel(id)`, `download(id) → bytes`, `remove(id)`, `parse(payload) → { status, type, serviceDocumentId,
+  requestId, testMode, reason, signerEmail }` (throws a 401 error when the event doesn't verify). A template is
+  `{ id, name, status, archived, editUrl, placeholders: [{ id, name, assigned }], fields: [{ apiId, type,
+  placeholder }] }`.
+- Counter-signing: a template role with a preassigned recipient (`assigned: { name, email }`, set in SignWell) is
+  a cosigner - the same person on every document, signing after the signer (SignWell signing order). The
+  template must leave exactly one role open, for the signer, and have a signature field for every role.
 - `documentStorage` - where signed PDFs go: `put(key, bytes, contentType)`, `get(key) → bytes`, `remove(key)`,
   `url(key, { filename })` (a temporary download link), `locate(key) → { storage, key }` (how gell-mail finds an
   attachment). `storage/memory` for tests.
-- `documentHooks` (optional) - `{ [name]: { signed } }`: the effect run once a document is signed, with context
-  `{ signed_, request_, $txn }`. An explicit dependency because gell discovery only registers modules with an
+- `documentHooks` (optional) - `{ [name]: { signed, signerSigned } }`: effects run once a document is signed by
+  everyone (context `{ signed_, request_, $txn }`), and when the signer has signed a document cosigners still
+  have to (context `{ request_, $txn }`). An explicit dependency because gell discovery only registers modules with an
   action or api.
 
 Retention: `document.purge` calls `signing.remove` (SignWell `DELETE /documents/{id}`) for every document the

@@ -51,6 +51,10 @@ const model = {
             attributes: ['name', 'signedTs', 'hash']
         },
         signedTs: 'timestamp',
+        cosigners: {
+            type: 'array',
+            description: 'who counter-signed after the signer, in order: [{ name, email }]'
+        },
         service: 'string',
         serviceDocumentId: 'string',
         requestId: 'string',

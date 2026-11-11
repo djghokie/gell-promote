@@ -9,12 +9,14 @@ const TYPE = 'DOCUMENT#REQUEST';
  *  - templateId: the DOCUMENT#TEMPLATE it was created from; title: the template's title at the time
  *  - values: the merge field values sent to the template's text fields
  *  - data: application values kept with the signature (e.g. { hourlyRate })
+ *  - cosigners: who signs after the signer (the template's preassigned recipients, e.g. the company), in order;
+ *    signerSignedTs: when the signer signed, while the request waits for the cosigners (still PENDING)
  *  - service/serviceDocumentId: the e-signature service and its id for the document
  *  - signedId: the DOCUMENT#SIGNED written when the service reports the document completed
  *  - at most one PENDING request per parent and name; a new request cancels the older ones
  */
 const STATUSES = {
-    PENDING: { description: 'sent to the e-signature service, waiting for the signer' },
+    PENDING: { description: 'sent to the e-signature service, waiting for the signer (then the cosigners, once signerSignedTs is set)' },
     COMPLETED: { description: 'signed; the signed copy is a DOCUMENT#SIGNED (signedId)' },
     DECLINED: { description: 'the signer declined to sign' },
     EXPIRED: { description: 'the e-signature service expired the document before it was signed' },
@@ -39,6 +41,14 @@ const model = {
         title: 'string',
         values: 'object',
         data: 'object',
+        cosigners: {
+            type: 'array',
+            description: 'who signs after the signer, in order: [{ name, email }]'
+        },
+        signerSignedTs: {
+            type: 'timestamp',
+            description: 'when the signer signed; the request stays PENDING until the cosigners sign'
+        },
         signer: {
             type: 'complex',
             attributes: ['name', 'email']

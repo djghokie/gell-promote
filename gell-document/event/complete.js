@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const request = require('../domain/request');
 const signed = require('../domain/signed');
+const hook = require('../lib/hooks');
 
 /**
  * Records a signature request the e-signature service reports completed (from ./webhook)
@@ -11,8 +12,9 @@ const signed = require('../domain/signed');
  *  - downloads the completed PDF (with the service's audit page) into documentStorage and writes the
  *    DOCUMENT#SIGNED; the request becomes COMPLETED with signedId
  *  - safe to receive twice: a request that already has its signed copy returns it
+ *  - completed means everyone signed: the signer and then any cosigners
  *  - then runs the application's signed hook, if it has one: the `documentHooks` dependency maps a template
- *    name to { signed } (an effect module), run with context { signed_, request_, $txn }
+ *    name to { signed } (an effect module), run with context { signed_, request_, $txn } (see ../lib/hooks)
  *    (e.g. hr.employee.agreement -> ps-hr/employee/agreement/event/signed)
  *  - a request cancelled before the service reported it signed is still recorded (the signer did sign), as
  *    SUPERSEDED: the request stays CANCELED, document.signed leaves it out and the hook does not run
@@ -31,18 +33,6 @@ exports.__metadata = {
             }
         }
     }
-}
-
-// NOTE: an explicit dependency, not the gell registry - discovery only registers modules with an action or api
-function application(name, deps) {
-    let hooks;
-    try {
-        hooks = deps.resolveSingle('documentHooks');
-    } catch (e) {
-        return undefined;
-    }
-
-    return (hooks || {})[name] && hooks[name].signed;
 }
 
 exports.effect = async function({ params={}, context={}, deps }) {
@@ -90,9 +80,11 @@ exports.effect = async function({ params={}, context={}, deps }) {
         ...(request$.data ? { data: request$.data } : {}),
         signature: {
             name: (request$.signer || {}).name,
-            signedTs,
+            // before the cosigners, when there are any
+            signedTs: request$.signerSignedTs || signedTs,
         },
         signedTs,
+        ...(request$.cosigners ? { cosigners: request$.cosigners } : {}),
         service: request$.service,
         serviceDocumentId: request$.serviceDocumentId,
         requestId: request$.id,
@@ -119,7 +111,7 @@ exports.effect = async function({ params={}, context={}, deps }) {
 
     logger.info(`recorded signed document (requestId=${request$.id}; signedId=${signed_.snapshotAttribute('id')}; status=${request$.status})`);
 
-    const handler = current && application(request$.name, deps);
+    const handler = current && hook(request$.name, 'signed', deps);
 
     if (handler && handler.effect) await handler.effect({ context: { signed_, request_, $txn }, deps });
 

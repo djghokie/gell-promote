@@ -5,9 +5,12 @@ const { templateIdOf } = require('./signwell');
 /**
  * In-memory e-signature service for tests - the same interface as ./signwell
  *  - templates: the service's templates, by id, as described ({ id, name, status, archived, editUrl,
- *    placeholders, fields }); defineTemplate(...) adds a finished one, createTemplate a draft
- *  - documents: what was created, by id ({ templateId, name, signer, placeholder, values, metadata, status })
- *  - event(type, id): a webhook payload for document id, signed like SignWell's (see parse)
+ *    placeholders, fields }); defineTemplate(...) adds a finished one (cosigner: a second role with a
+ *    preassigned recipient { name, email }), createTemplate a draft
+ *  - documents: what was created, by id ({ templateId, name, signer, placeholder, cosigners, values, metadata,
+ *    status })
+ *  - event(type, id, { signer }): a webhook payload for document id, signed like SignWell's (see parse); signer
+ *    is the email of the recipient a document_signed event is about
  *  - calls: every call made, e.g. [['createFromTemplate', id], ['cancel', id]]
  */
 const NAME = 'FAKE';
@@ -42,17 +45,23 @@ module.exports = function fake() {
         /**
          * A finished template, ready to sign from: one signer role, a signature field and text fields for apiIds
          */
-        defineTemplate({ id=`fake-template-${++sequence}`, name='Agreement', placeholder='Signer', apiIds=[], status='Available', fields }={}) {
+        defineTemplate({ id=`fake-template-${++sequence}`, name='Agreement', placeholder='Signer', apiIds=[], status='Available', fields, cosigner }={}) {
+            const company = cosigner && (cosigner.placeholder || 'Company');
+
             templates[id] = {
                 id,
                 name,
                 status,
                 archived: false,
                 editUrl: `https://signing.test/edit/template/${id}`,
-                placeholders: [{ id: '1', name: placeholder }],
+                placeholders: [
+                    { id: '1', name: placeholder },
+                    ...(cosigner ? [{ id: '2', name: company, assigned: { name: cosigner.name, email: cosigner.email } }] : []),
+                ],
                 fields: fields || [
                     ...apiIds.map(apiId => ({ apiId, type: 'text', placeholder })),
                     { apiId: 'Signature_1', type: 'signature', placeholder },
+                    ...(cosigner ? [{ apiId: 'Signature_2', type: 'signature', placeholder: company }] : []),
                 ],
             };
 
@@ -84,7 +93,7 @@ module.exports = function fake() {
             return templates[id] ? { ...templates[id] } : undefined;
         },
 
-        async createFromTemplate({ templateId, name, signer, placeholder, values={}, redirectUrl, metadata={} }) {
+        async createFromTemplate({ templateId, name, signer, placeholder, cosigners=[], values={}, redirectUrl, metadata={} }) {
             const template = templates[templateId];
 
             if (!template) throw error(`fake template not found (id=${templateId})`, 502);
@@ -95,16 +104,16 @@ module.exports = function fake() {
 
             const id = `fake-document-${++sequence}`;
 
-            documents[id] = { id, templateId, name, signer, placeholder, values, redirectUrl, metadata, status: 'PENDING' };
+            documents[id] = { id, templateId, name, signer, placeholder, cosigners, values, redirectUrl, metadata, status: 'PENDING' };
             calls.push(['createFromTemplate', id]);
 
             return { id, signingUrl: `https://signing.test/${id}` };
         },
 
-        async signingUrl(id) {
-            calls.push(['signingUrl', id]);
+        async signingUrl(id, { email }={}) {
+            calls.push(['signingUrl', id, ...(email ? [email] : [])]);
 
-            return `https://signing.test/${id}?at=${Date.now()}`;
+            return `https://signing.test/${id}?at=${Date.now()}${email ? `&signer=${encodeURIComponent(email)}` : ''}`;
         },
 
         async cancel(id) {
@@ -123,12 +132,12 @@ module.exports = function fake() {
             delete documents[id];
         },
 
-        event(type, id, { hash: forged, reason }={}) {
+        event(type, id, { hash: forged, reason, signer }={}) {
             const time = Math.floor(Date.now() / 1000);
             const document = documents[id] || { id, metadata: {} };
 
             return {
-                event: { type, time, hash: forged || hash(type, time) },
+                event: { type, time, hash: forged || hash(type, time), ...(signer ? { related_signer: { email: signer } } : {}) },
                 data: { object: { id, metadata: document.metadata, test_mode: true, ...(reason ? { decline_reason: reason } : {}) } },
             };
         },
@@ -144,6 +153,7 @@ module.exports = function fake() {
 
             const object = data.object || {};
             const status = {
+                document_signed: 'SIGNED',
                 document_completed: 'COMPLETED',
                 document_declined: 'DECLINED',
                 document_expired: 'EXPIRED',
@@ -157,6 +167,7 @@ module.exports = function fake() {
                 requestId: object.metadata && object.metadata.requestId,
                 testMode: true,
                 reason: object.decline_reason,
+                signerEmail: (event.related_signer && event.related_signer.email) || undefined,
             };
         },
     };

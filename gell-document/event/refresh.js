@@ -34,8 +34,18 @@ function check(described) {
     if (archived) problems.push('archived at the e-signature service');
     // WIP: 'Created' for a draft and 'Available' once finished are from SignWell's API reference examples
     if (String(status || '').toLowerCase() !== AVAILABLE) problems.push(`still a draft at the e-signature service (status ${status || 'unknown'}) - finish it in the editor`);
-    if (placeholders.length !== 1) problems.push(`needs exactly one signer role (it has ${placeholders.length})`);
-    if (!fields.some(f => f.type === 'signature')) problems.push('has no signature field');
+    // the signer's role is the one left open; other roles have the same preassigned recipient on every document
+    // (e.g. the company counter-signing)
+    const open = placeholders.filter(p => !p.assigned);
+    if (open.length !== 1) problems.push(`needs exactly one signer role left open for the signer (it has ${open.length}) - give the other roles a preassigned recipient`);
+
+    if (!fields.some(f => f.type === 'signature')) {
+        problems.push('has no signature field');
+    } else if (placeholders.length > 1) {
+        for (const p of placeholders) {
+            if (!fields.some(f => f.type === 'signature' && f.placeholder === p.name)) problems.push(`has no signature field for ${p.name}`);
+        }
+    }
 
     return problems;
 }

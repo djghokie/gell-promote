@@ -57,8 +57,43 @@ describe('gell-document template check', function() {
         assert.strictEqual(problems.length, 4);
         assert.ok(problems.some(p => /draft/.test(p)));
         assert.ok(problems.some(p => /archived/.test(p)));
-        assert.ok(problems.some(p => /exactly one signer role \(it has 0\)/.test(p)));
+        assert.ok(problems.some(p => /exactly one signer role left open .*\(it has 0\)/.test(p)));
         assert.ok(problems.some(p => /signature field/.test(p)));
+    })
+
+    describe('with a counter-signer', function() {
+        const company = { id: '2', name: 'Company', assigned: { name: 'Owner', email: 'owner@example.com' } };
+        const cosigned = {
+            ...ready,
+            placeholders: [...ready.placeholders, company],
+            fields: [
+                { apiId: 'fullName', type: 'text', placeholder: 'Employee' },
+                { apiId: 'Signature_1', type: 'signature', placeholder: 'Employee' },
+                { apiId: 'Signature_2', type: 'signature', placeholder: 'Company' },
+            ],
+        };
+
+        it('accepts one open role and a preassigned role, each with a signature field', function() {
+            assert.deepStrictEqual(check(cosigned), []);
+        })
+
+        it('reports a role without a signature field', function() {
+            const problems = check({ ...cosigned, fields: cosigned.fields.slice(0, 2) });
+
+            assert.deepStrictEqual(problems, ['has no signature field for Company']);
+        })
+
+        it('reports two open roles', function() {
+            const problems = check({ ...cosigned, placeholders: [ready.placeholders[0], { id: '2', name: 'Company' }] });
+
+            assert.ok(problems.some(p => /exactly one signer role left open .*\(it has 2\)/.test(p)));
+        })
+
+        it('reports no open role', function() {
+            const problems = check({ ...cosigned, placeholders: [{ ...ready.placeholders[0], assigned: { name: 'X', email: 'x@example.com' } }, company] });
+
+            assert.ok(problems.some(p => /\(it has 0\)/.test(p)));
+        })
     })
 })
 
@@ -76,7 +111,18 @@ describe('gell-document signwell', function() {
                 requestId: 'req-1',
                 testMode: true,
                 reason: undefined,
+                signerEmail: undefined,
             });
+        })
+
+        it('maps one recipient signing to SIGNED with who signed', function() {
+            const payload = event('document_signed', { id: 'doc-1', metadata: { requestId: 'req-1' } });
+            payload.event.related_signer = { email: 'dee@example.com', name: 'Dee Driver' };
+
+            const result = service.parse(payload);
+
+            assert.strictEqual(result.status, 'SIGNED');
+            assert.strictEqual(result.signerEmail, 'dee@example.com');
         })
 
         it('maps declined, expired and canceled documents', function() {
@@ -171,6 +217,25 @@ describe('gell-document signwell', function() {
             ]);
         })
 
+        it('describes a preassigned recipient as assigned', async function() {
+            const { fetch } = fakeFetch({ json: {
+                id: 't-1', status: 'Available',
+                placeholders: [
+                    { id: '1', name: 'Employee', preassigned_recipient_name: null, preassigned_recipient_email: null },
+                    { id: '2', name: 'Company', preassigned_recipient_name: 'Owner', preassigned_recipient_email: 'owner@example.com' },
+                ],
+                fields: [],
+            } });
+            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
+
+            const result = await service.template('t-1');
+
+            assert.deepStrictEqual(result.placeholders, [
+                { id: '1', name: 'Employee' },
+                { id: '2', name: 'Company', assigned: { name: 'Owner', email: 'owner@example.com' } },
+            ]);
+        })
+
         it('is undefined for a template the service does not have', async function() {
             const { fetch } = fakeFetch({ status: 404 });
             const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
@@ -207,6 +272,29 @@ describe('gell-document signwell', function() {
             assert.deepStrictEqual(request.body.template_fields, [{ api_id: 'fullName', value: 'Dee Driver' }, { api_id: 'hourlyRate', value: '$25.00' }]);
             assert.strictEqual(request.body.redirect_url, 'https://ops/back');
             assert.deepStrictEqual(request.body.metadata, { requestId: 'req-1' });
+            assert.strictEqual(request.body.apply_signing_order, undefined, 'no signing order for one signer');
+        })
+
+        it('adds the cosigners after the signer, in signing order', async function() {
+            const { fetch, requests } = fakeFetch({ status: 201, json: { id: 'doc-1', recipients: [{ id: '1', email: 'dee@example.com', embedded_signing_url: 'https://sign/doc-1/1' }, { id: '2', email: 'owner@example.com', embedded_signing_url: 'https://sign/doc-1/2' }] } });
+            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
+
+            const result = await service.createFromTemplate({
+                templateId: 't-1',
+                name: 'Agreement',
+                signer: { name: 'Dee Driver', email: 'dee@example.com' },
+                placeholder: 'Employee',
+                cosigners: [{ placeholder: 'Company', name: 'Owner', email: 'owner@example.com' }],
+            });
+
+            const [request] = requests;
+
+            assert.strictEqual(result.signingUrl, 'https://sign/doc-1/1', "the signer's url");
+            assert.strictEqual(request.body.apply_signing_order, true);
+            assert.deepStrictEqual(request.body.recipients, [
+                { id: '1', placeholder_name: 'Employee', name: 'Dee Driver', email: 'dee@example.com', send_email: false },
+                { id: '2', placeholder_name: 'Company', name: 'Owner', email: 'owner@example.com', send_email: false },
+            ]);
         })
 
         it('falls back to the signing url when there is no embedded one', async function() {
@@ -216,6 +304,22 @@ describe('gell-document signwell', function() {
             const result = await service.createFromTemplate({ templateId: 't-1', name: 'x', signer: {}, placeholder: 'Employee' });
 
             assert.strictEqual(result.signingUrl, 'https://sign/doc-1');
+        })
+    })
+
+    describe('signingUrl', function() {
+        it("gives the url of the recipient with the email", async function() {
+            const { fetch } = fakeFetch({ json: { id: 'doc-1', recipients: [{ id: '1', email: 'dee@example.com', embedded_signing_url: 'https://sign/1' }, { id: '2', email: 'Owner@Example.com', embedded_signing_url: 'https://sign/2' }] } });
+            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
+
+            assert.strictEqual(await service.signingUrl('doc-1', { email: 'owner@example.com' }), 'https://sign/2');
+        })
+
+        it("gives the first recipient's url without an email", async function() {
+            const { fetch } = fakeFetch({ json: { id: 'doc-1', recipients: [{ id: '1', embedded_signing_url: 'https://sign/1' }, { id: '2', embedded_signing_url: 'https://sign/2' }] } });
+            const service = signwell({ apiKey: 'key', webhookId: WEBHOOK_ID, fetch });
+
+            assert.strictEqual(await service.signingUrl('doc-1'), 'https://sign/1');
         })
     })
 
