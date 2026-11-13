@@ -3,7 +3,7 @@ const _ = require('lodash');
 const message = require('../domain/message');
 const reference = require('../domain/reference');
 
-const SUMMARY = ['id', 'name', 'status', 'to', 'subject', 'attempts', 'error', 'initiatedTs', 'sentTs', 'failedTs', 'purgedOn', 'parentId', 'parentType'];
+const SUMMARY = ['id', 'name', 'status', 'to', 'subject', 'attempts', 'error', 'initiatedTs', 'sentTs', 'failedTs', 'canceledTs', 'canceledBy', 'purgedOn', 'parentId', 'parentType'];
 
 /**
  * The emails about a record, newest first - its own MAIL#MESSAGEs and those associated with it by MAIL#REFERENCE

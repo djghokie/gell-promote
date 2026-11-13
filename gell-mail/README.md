@@ -7,6 +7,7 @@ and the message is sent after the transaction commits - nothing is emailed for a
 - `event/deliver` - effect: sends one QUEUED message and records SENT / FAILED; skips messages already delivered
 - `event/flush` - effect: delivers every message still QUEUED (backstop for the stream Lambda); action: the same, for an operator
 - `event/retry` - action: sends a QUEUED or FAILED message now (FAILED gets a fresh set of attempts)
+- `event/cancel` - action: cancels a QUEUED message so nothing sends it (CANCELED)
 - `snapshot/messages` - the emails about a record (its parent, or a referenced record), newest first
 - `snapshot/message` - one email in full
 - `snapshot/outbox` - every email queued in the last N days, plus any still QUEUED, newest first

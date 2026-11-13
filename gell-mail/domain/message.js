@@ -14,11 +14,13 @@ const TYPE = 'MAIL#MESSAGE';
  *  - attachments are references to stored files ({ storage, key, filename, type }), read when the message is
  *    delivered - the file itself is never stored on the message
  *  - activeTs is set while QUEUED, so queued messages are found with the sessions.active.type query
+ *  - CANCELED: an operator stopped a QUEUED message (mail.message.cancel); nothing delivers it after that
  */
 const STATUSES = {
     QUEUED: { description: 'waiting to be sent' },
     SENT: { description: 'accepted by SendGrid' },
     FAILED: { description: 'gave up after MAX_ATTEMPTS sends failed' },
+    CANCELED: { description: 'canceled by an operator before it was sent' },
 };
 
 const MAX_ATTEMPTS = 5;
@@ -60,6 +62,11 @@ const model = {
         error: 'string',
         sentTs: 'timestamp',
         failedTs: 'timestamp',
+        canceledTs: 'timestamp',
+        canceledBy: {
+            type: 'string',
+            description: 'userId of who canceled it'
+        },
         retainDays: {
             type: 'number',
             description: 'when set, the message expires (ttl) this many days after it is sent; kept with its parent otherwise'

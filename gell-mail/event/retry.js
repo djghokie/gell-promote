@@ -1,5 +1,3 @@
-const assert = require('assert');
-
 const lookup = require('gell-session/snapshot/lookup');
 
 const message = require('../domain/message');
@@ -11,7 +9,7 @@ const deliver = require('./deliver');
  *  - FAILED: queued again with a fresh set of attempts (status QUEUED, attempts 0, active again), then sent;
  *    the update is a MODIFY on the session stream, so the mailer Lambda (INSERT only) doesn't also send it
  *  - QUEUED: sent now, as mail.flush would
- *  - a SENT message is not sent again
+ *  - a SENT or CANCELED message is not sent (400)
  *  - a failed send is recorded on the message (see ./deliver) and not rethrown - the caller sees the
  *    message's status and error
  *  - returns the message State
@@ -30,6 +28,14 @@ exports.__metadata = {
     }
 }
 
+function invalid(message) {
+    const e = new Error(message);
+    e.name = 'ParameterValidationError';
+    e.status = 400;
+
+    return e;
+}
+
 exports.action = async function({ params={}, deps }) {
     const { logger, store } = deps.resolve('logger', 'store');
 
@@ -41,11 +47,12 @@ exports.action = async function({ params={}, deps }) {
         deps
     });
 
-    assert(message_, `email not found (id=${params.id})`);
+    if (!message_) throw invalid(`email not found (id=${params.id})`);
 
     const status = message_.snapshotAttribute('status');
 
-    assert(status !== 'SENT', `email already sent (id=${params.id})`);
+    if (status === 'SENT') throw invalid(`email already sent (id=${params.id})`);
+    if (status === 'CANCELED') throw invalid(`email was canceled (id=${params.id})`);
 
     if (status === 'FAILED') {
         const now = Date.now();
