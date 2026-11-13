@@ -11,6 +11,7 @@ and the message is sent after the transaction commits - nothing is emailed for a
 - `snapshot/messages` - the emails about a record (its parent, or a referenced record), newest first
 - `snapshot/message` - one email in full
 - `snapshot/outbox` - every email queued in the last N days, plus any still QUEUED, newest first
+- `snapshot/templates`, `snapshot/template` - the email templates configured in SendGrid (Template Engine API through the `mail` dependency's client; the key needs Template Engine read access)
 - `queries` - named queries (`mail.messages.since`) the application registers on the session store
 
 Attachments: `queue` takes `attachments: [{ storage, key, filename, type }]` - a reference, not the file.
