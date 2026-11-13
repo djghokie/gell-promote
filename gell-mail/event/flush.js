@@ -10,6 +10,7 @@ const DEFAULT_AGE_MS = 5 * 60 * 1000;
  *  - params.olderThanMs (optional, default 5 minutes): only messages queued at least this long ago, leaving
  *    fresh ones to the Lambda
  *  - returns { sent: [id], queued: [id] (failed this time, will be retried), failed: [id] (gave up) }
+ *  - action: the same, for an operator (the outbox) - always with the default age, leaving fresh messages to the Lambda
  */
 exports.__metadata = {
     name: 'mail.flush',
@@ -17,16 +18,16 @@ exports.__metadata = {
     triggers: {
         effect: {
             params: {}
+        },
+        action: {
+            params: {}
         }
     }
 }
 
-exports.effect = async function({ params={}, deps }) {
+async function flush({ olderThanMs=DEFAULT_AGE_MS }, deps) {
     const { logger, store } = deps.resolve('logger', 'store');
 
-    logger.info('executing effect (name="mail.flush")');
-
-    const { olderThanMs=DEFAULT_AGE_MS } = params;
     const before = Date.now() - olderThanMs;
 
     const queued$ = (await store.drain('sessions.active.type', { type: message.TYPE }))
@@ -49,4 +50,20 @@ exports.effect = async function({ params={}, deps }) {
     logger.info(`flushed queued email (found=${queued$.length}; sent=${result.sent.length}; retry=${result.queued.length}; failed=${result.failed.length})`);
 
     return result;
+}
+
+exports.effect = async function({ params={}, deps }) {
+    const { logger } = deps.resolve('logger');
+
+    logger.info('executing effect (name="mail.flush")');
+
+    return flush(params, deps);
+}
+
+exports.action = async function({ deps }) {
+    const { logger } = deps.resolve('logger');
+
+    logger.info('executing action (name="mail.flush")');
+
+    return flush({}, deps);
 }

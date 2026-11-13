@@ -43,8 +43,17 @@ async function messages(parentId, deps) {
 
     return [...own$, ...referenced$]
         .sort((m1, m2) => (m2.initiatedTs || 0) - (m1.initiatedTs || 0))
-        .map(m$ => ({ ..._.pick(m$, SUMMARY), ...(m$.attachments ? { attachments: m$.attachments.map(a => a.filename) } : {}) }));
+        .map(summary);
 }
+
+/**
+ * A MAIL#MESSAGE for listing: no content, attachment file names only
+ */
+function summary(m$) {
+    return { ..._.pick(m$, SUMMARY), ...(m$.attachments ? { attachments: m$.attachments.map(a => a.filename) } : {}) };
+}
+
+exports.summary = summary;
 
 exports.effect = async function({ params={}, deps }) {
     const { logger } = deps.resolve('logger');

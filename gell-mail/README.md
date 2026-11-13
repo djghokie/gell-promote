@@ -5,9 +5,12 @@ and the message is sent after the transaction commits - nothing is emailed for a
 
 - `event/queue` - effect: puts the message (and a `MAIL#REFERENCE` for each extra record it is about) in `$txn`
 - `event/deliver` - effect: sends one QUEUED message and records SENT / FAILED; skips messages already delivered
-- `event/flush` - effect: delivers every message still QUEUED (backstop for the stream Lambda)
+- `event/flush` - effect: delivers every message still QUEUED (backstop for the stream Lambda); action: the same, for an operator
+- `event/retry` - action: sends a QUEUED or FAILED message now (FAILED gets a fresh set of attempts)
 - `snapshot/messages` - the emails about a record (its parent, or a referenced record), newest first
 - `snapshot/message` - one email in full
+- `snapshot/outbox` - every email queued in the last N days, plus any still QUEUED, newest first
+- `queries` - named queries (`mail.messages.since`) the application registers on the session store
 
 Attachments: `queue` takes `attachments: [{ storage, key, filename, type }]` - a reference, not the file.
 `deliver` reads each file with `deps.resolveSingle(storage).get(key)` and sends it as a SendGrid attachment, so
