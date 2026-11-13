@@ -48,9 +48,16 @@ async function messages(parentId, deps) {
 
 /**
  * A MAIL#MESSAGE for listing: no content, attachment file names only
+ *  - templateId: the SendGrid dynamic template it is sent with, when it is (otherwise the content is in the message)
  */
 function summary(m$) {
-    return { ..._.pick(m$, SUMMARY), ...(m$.attachments ? { attachments: m$.attachments.map(a => a.filename) } : {}) };
+    const templateId = m$.message && m$.message.template_id;
+
+    return {
+        ..._.pick(m$, SUMMARY),
+        ...(m$.attachments ? { attachments: m$.attachments.map(a => a.filename) } : {}),
+        ...(templateId ? { templateId } : {}),
+    };
 }
 
 exports.summary = summary;
