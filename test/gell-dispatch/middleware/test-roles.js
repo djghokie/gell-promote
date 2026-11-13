@@ -119,6 +119,30 @@ describe('roles middleware', function() {
         })
     })
 
+    describe('public trigger', function() {
+        beforeEach(function() {
+            event = { __invocationSpec: invocation('action', { public: true }) };
+        })
+
+        it('allows missing caller', function() {
+            assert.strictEqual(middleware(event, resume), 'resumed');
+            assert(resumed);
+        })
+
+        it('allows caller without a role', function() {
+            event.caller = caller({});
+
+            assert.strictEqual(middleware(event, resume), 'resumed');
+            assert(resumed);
+        })
+
+        it('ignores roles on a public trigger', function() {
+            event = { __invocationSpec: invocation('api', { public: true, roles: ['administrator'] }), caller: caller({ role: 'driver' }) };
+
+            assert.strictEqual(middleware(event, resume), 'resumed');
+        })
+    })
+
     describe('unchecked triggers', function() {
         it('does not check effect triggers', function() {
             event = { __invocationSpec: invocation('effect', { roles: ['administrator'] }) };
