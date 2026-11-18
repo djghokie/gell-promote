@@ -1,7 +1,7 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const runtime = require('gell-runtime/mocha');
+const runtime = require('../../../gell-runtime/mocha');
 
 const registry = require('../../../gell-discover/domain/registry');
 const inspect = require('../../../gell-discover/snapshot/inspect');

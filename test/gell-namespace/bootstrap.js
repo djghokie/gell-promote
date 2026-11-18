@@ -5,20 +5,21 @@ const activityQueries = require('gell-session/dynamodb/activity/queries');
 const MockStore = require('gell-aws-dynamodb/mock/store');
 const queryWrapper = require('gell-aws-dynamodb/query-wrapper');
 
-const { Types } = require('../../gell-discover/domain/types');
-
 const tenant = require('../../gell-namespace/domain/tenant');
 const application = require('../../gell-namespace/domain/application');
 
-function setupTypes(deps) {
-    const types = new Types();
-    types.register(tenant.TYPE, tenant.model);
-    types.register(application.TYPE, application.model);
-
-    deps.define("types", types);
+function setupTypes() {
+    this.registerType(tenant);
+    this.registerType(application);
 }
 
-function setupStore(deps) {
+function configureEvents() {
+    this.discover(
+        // `${__dirname}/../../gell-namespace`
+    );
+}
+
+function setupStore() {
     const store = new MockStore();
     Object.assign(store.namedQueries,
         queryWrapper.ut(sessionQueries),
@@ -26,12 +27,14 @@ function setupStore(deps) {
         queryWrapper.ut(activityQueries),
     );
     
-    deps.define('store', store);
+    this.deps.define('store', store);
     this.store = store;
 }
 
 exports.beforeEach = function() {
-    setupTypes(this.deps);
-
-    setupStore(this.deps);
+    [
+        setupTypes,
+        configureEvents,
+        setupStore
+    ].forEach(f => f.bind(this)());
 }

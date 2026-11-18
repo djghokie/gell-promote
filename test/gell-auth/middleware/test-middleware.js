@@ -2,7 +2,7 @@ const assert = require('assert');
 const _ = require('lodash');
 
 const { lift } = require('gell/future');
-const runtime = require('gell-runtime/mocha');
+const runtime = require('../../../gell-runtime/mocha');
 
 const bootstrap = require('../bootstrap');
 

@@ -3,7 +3,7 @@ const _ = require('lodash');
 
 const { State } = require('gell');
 
-const runtime = require('gell-runtime/mocha');
+const runtime = require('../../../gell-runtime/mocha');
 
 const { TimePeriod } = require('gell-calendar/domain/timeperiod');
 const standard = require('gell-calendar/standard');

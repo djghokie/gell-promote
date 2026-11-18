@@ -2,7 +2,7 @@ const assert = require('assert');
 const _ = require('lodash');
 
 const { init } = require('gell/future');
-const runtime = require('gell-runtime/mocha');
+const runtime = require('../../gell-runtime/mocha');
 
 const bus = require('../../gell-dispatch/bus');
 const resolver = require('gell-session/dispatch/resolver');
@@ -168,7 +168,8 @@ describe('event bus', function() {
                 route: 'nometadata#action',
                 eventName: 'nometadata',
                 triggerName: 'action',
-                triggerSpec: {}
+                triggerSpec: {},
+                metadata: {}
             });
         })
     })

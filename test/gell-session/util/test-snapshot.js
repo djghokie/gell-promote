@@ -1,7 +1,7 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const runtime = require('gell-runtime/mocha');
+const runtime = require('../../../gell-runtime/mocha');
 const session = require('gell-session/domain/session');
 const javascript = require('gell-domain/binding/javascript');
 const MockStore = require('gell-aws-dynamodb/mock/store');
