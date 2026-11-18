@@ -40,6 +40,8 @@ function throwError(name, status, route, message, roles) {
  * gell-dispatch middleware that authorizes callers based on the roles allowed by the event trigger metadata
  *  - allowed roles are defined by the "roles" attribute of the trigger (e.g. __metadata.triggers.action.roles)
  *  - only checks triggers reachable by external callers (default: action, api)
+ *  - triggers declaring "public: true" allow any caller, including anonymous ones
+ *      - the event is responsible for authorizing the call itself (e.g. by validating a token param)
  *  - caller without a role is rejected (401)
  *  - triggers without "roles" allow any caller with a role
  *  - caller without an allowed role is rejected (403)
@@ -62,6 +64,8 @@ module.exports = function({ triggers=['action', 'api'], rolesOf=callerRoles }={}
         const { route, triggerName, triggerSpec } = __invocationSpec;
 
         if (!triggers.includes(triggerName)) return resume(event);
+
+        if (triggerSpec.public === true) return resume(event);
 
         const roles = rolesOf(caller);
 

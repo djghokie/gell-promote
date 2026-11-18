@@ -1,0 +1,81 @@
+const javascript = require('gell-domain/binding/javascript');
+const session = require('gell-session/domain/session');
+
+const TYPE = 'DOCUMENT#REQUEST';
+
+/**
+ * A request for a signature through an e-signature service (SignWell) - see ../event/request
+ *  - parentId/parentType: the record it is signed for (an employee FILE, ...); name: what the document is
+ *  - templateId: the DOCUMENT#TEMPLATE it was created from; title: the template's title at the time
+ *  - values: the merge field values sent to the template's text fields
+ *  - data: application values kept with the signature (e.g. { hourlyRate })
+ *  - cosigners: who signs after the signer (the template's preassigned recipients, e.g. the company), in order;
+ *    signerSignedTs: when the signer signed, while the request waits for the cosigners (still PENDING)
+ *  - service/serviceDocumentId: the e-signature service and its id for the document
+ *  - signedId: the DOCUMENT#SIGNED written when the service reports the document completed
+ *  - at most one PENDING request per parent and name; a new request cancels the older ones
+ */
+const STATUSES = {
+    PENDING: { description: 'sent to the e-signature service, waiting for the signer (then the cosigners, once signerSignedTs is set)' },
+    COMPLETED: { description: 'signed; the signed copy is a DOCUMENT#SIGNED (signedId)' },
+    DECLINED: { description: 'the signer declined to sign' },
+    EXPIRED: { description: 'the e-signature service expired the document before it was signed' },
+    CANCELED: { description: 'cancelled before it was signed (a newer request, or by the application)' },
+};
+
+const model = {
+    name: TYPE,
+    extends: [session.model],
+    attributes: {
+        type: {
+            type: 'string',
+            default: TYPE
+        },
+        status: {
+            type: 'string',
+            default: 'PENDING'
+        },
+        name: 'string',
+        parentType: 'string',
+        templateId: 'string',
+        title: 'string',
+        values: 'object',
+        data: 'object',
+        cosigners: {
+            type: 'array',
+            description: 'who signs after the signer, in order: [{ name, email }]'
+        },
+        signerSignedTs: {
+            type: 'timestamp',
+            description: 'when the signer signed; the request stays PENDING until the cosigners sign'
+        },
+        signer: {
+            type: 'complex',
+            attributes: ['name', 'email']
+        },
+        service: 'string',
+        serviceDocumentId: 'string',
+        signedId: 'string',
+        completedTs: 'timestamp',
+        closedTs: 'timestamp',
+        purgedOn: {
+            type: 'string',
+            description: 'YYYY-MM-DD the signer and the service\'s copy were removed with its parent record (document.purge)'
+        },
+        reason: {
+            type: 'string',
+            description: 'why a request was cancelled, declined or expired'
+        },
+    },
+
+    workflow: {
+        statuses: STATUSES
+    }
+}
+
+module.exports = {
+    TYPE,
+    STATUSES,
+    model,
+    materialize: session$ => javascript.materialize(session$, model)
+}
