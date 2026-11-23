@@ -1,5 +1,7 @@
 const assert = require('assert');
 
+const { httpError } = require('../../describe');
+
 exports.__metadata = {
     name: 'gell.domain.operation',
     description: 'returns a registered named operation by name',
@@ -26,12 +28,12 @@ exports.effect = async function({ params={}, deps }) {
 }
 
 /**
- * NOTE: gell-http's api wrapper crashes on an empty result, so a missing OPERATION is reported as a 404 instead
+ * NOTE: gell-http's api wrapper crashes on an empty result, so a missing operation is reported as a 404 instead
  */
 exports.api = async function({ params={}, deps }) {
     const operation$ = await exports.effect({ params, deps });
 
-    if (!operation$) throw Object.assign(new Error(`operation not found (name=${params.name})`), { status: 404 });
+    if (!operation$) throw httpError(`operation not found (name=${params.name})`, 404);
 
     return operation$;
 }

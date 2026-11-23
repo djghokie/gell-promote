@@ -1,5 +1,7 @@
 const assert = require('assert');
 
+const { httpError } = require('../../describe');
+
 exports.__metadata = {
     name: 'gell.domain.query',
     description: 'returns a registered named query by name',
@@ -26,12 +28,12 @@ exports.effect = async function({ params={}, deps }) {
 }
 
 /**
- * NOTE: gell-http's api wrapper crashes on an empty result, so a missing QUERY is reported as a 404 instead
+ * NOTE: gell-http's api wrapper crashes on an empty result, so a missing query is reported as a 404 instead
  */
 exports.api = async function({ params={}, deps }) {
     const query$ = await exports.effect({ params, deps });
 
-    if (!query$) throw Object.assign(new Error(`query not found (name=${params.name})`), { status: 404 });
+    if (!query$) throw httpError(`query not found (name=${params.name})`, 404);
 
     return query$;
 }
