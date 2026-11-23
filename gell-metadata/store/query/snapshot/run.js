@@ -1,5 +1,8 @@
 const assert = require('assert');
 
+const { httpError } = require('../../describe');
+
+// WIP: the administrator role name is a gell-web/gell-auth convention; make it configurable if a project differs
 const ROLE_ADMINISTRATOR = 'administrator';
 
 const DEFAULT_LIMIT = 100;
@@ -24,10 +27,6 @@ exports.__metadata = {
             }
         }
     }
-}
-
-function httpError(message, status) {
-    return Object.assign(new Error(message), { status });
 }
 
 /**

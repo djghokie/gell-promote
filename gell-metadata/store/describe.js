@@ -1,0 +1,21 @@
+/**
+ * Shared helpers for the gell-metadata snapshots, which read the gell-discover Queries/Operations registries
+ * (gell-discover/domain/queries.js, gell-discover/domain/operations.js)
+ */
+
+/**
+ * plain-object metadata of every definition in a registry, sorted by name
+ */
+exports.describeAll = function(registry) {
+    return Array.from(registry.names())
+        .map(name => registry.describe(name))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        ;
+}
+
+/**
+ * an Error carrying an HTTP status, reported by gell-http's api wrapper
+ */
+exports.httpError = function(message, status) {
+    return Object.assign(new Error(message), { status });
+}

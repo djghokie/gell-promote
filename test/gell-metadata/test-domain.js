@@ -15,11 +15,11 @@ const actionsSnapshot = require('../../gell-metadata/snapshot/actions');
 const snapshotsSnapshot = require('../../gell-metadata/snapshot/snapshots');
 const actionSnapshot = require('../../gell-metadata/snapshot/action');
 const snapshotSnapshot = require('../../gell-metadata/snapshot/snapshot');
-const queriesSnapshot = require('../../gell-metadata/snapshot/queries');
-const querySnapshot = require('../../gell-metadata/snapshot/query');
-const queryRunSnapshot = require('../../gell-metadata/snapshot/query-run');
-const operationsSnapshot = require('../../gell-metadata/snapshot/operations');
-const operationSnapshot = require('../../gell-metadata/snapshot/operation');
+const queriesSnapshot = require('../../gell-metadata/store/query/snapshot/queries');
+const querySnapshot = require('../../gell-metadata/store/query/snapshot/query');
+const queryRunSnapshot = require('../../gell-metadata/store/query/snapshot/run');
+const operationsSnapshot = require('../../gell-metadata/store/operation/snapshot/operations');
+const operationSnapshot = require('../../gell-metadata/store/operation/snapshot/operation');
 const jobsSnapshot = require('../../gell-metadata/snapshot/jobs');
 const jobSnapshot = require('../../gell-metadata/snapshot/job');
 
