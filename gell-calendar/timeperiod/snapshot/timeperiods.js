@@ -13,7 +13,7 @@ exports.__metadata = {
     }
 }
 
-async function select({ params={}, deps }) {
+async function select(deps) {
     const store = deps.resolveSingle('store');
     const types = deps.resolveSingle({ name: 'types', optional: true });
 
@@ -27,11 +27,11 @@ async function select({ params={}, deps }) {
 exports.effect = async function({ params={}, deps }) {
     deps.resolveSingle('logger').info('executing effect (name="calendar.timeperiods")');
 
-    return select({ params, deps });
+    return select(deps);
 }
 
 exports.api = async function({ params={}, deps }) {
     deps.resolveSingle('logger').info('executing api (name="calendar.timeperiods")');
 
-    return select({ params, deps });
+    return select(deps);
 }

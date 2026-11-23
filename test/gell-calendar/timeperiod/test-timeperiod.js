@@ -7,7 +7,7 @@ const bootstrap = require('./bootstrap');
 const timeperiod = require('../../../gell-calendar/timeperiod/domain/timeperiod');
 const instance = require('../../../gell-calendar/timeperiod/domain/instance');
 const save = require('../../../gell-calendar/timeperiod/event/save');
-const instanceSave = require('../../../gell-calendar/timeperiod/event/instance-save');
+const instanceSave = require('../../../gell-calendar/timeperiod/instance/event/save');
 const timeperiodsSnapshot = require('../../../gell-calendar/timeperiod/snapshot/timeperiods');
 const instancesSnapshot = require('../../../gell-calendar/timeperiod/snapshot/instances');
 

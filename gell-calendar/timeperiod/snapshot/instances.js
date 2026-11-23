@@ -15,13 +15,9 @@ exports.__metadata = {
     }
 }
 
-async function select({ params={}, deps }) {
+async function select(timePeriodId, deps) {
     const store = deps.resolveSingle('store');
     const types = deps.resolveSingle({ name: 'types', optional: true });
-
-    const { timePeriodId } = params;
-
-    assert(timePeriodId, 'timePeriodId is required');
 
     const type = types ? types.name(instance.TYPE) : instance.TYPE;
 
@@ -33,11 +29,15 @@ async function select({ params={}, deps }) {
 exports.effect = async function({ params={}, deps }) {
     deps.resolveSingle('logger').info('executing effect (name="calendar.timeperiod.instances")');
 
-    return select({ params, deps });
+    const { timePeriodId } = params;
+
+    return select(timePeriodId, deps);
 }
 
 exports.api = async function({ params={}, deps }) {
     deps.resolveSingle('logger').info('executing api (name="calendar.timeperiod.instances")');
 
-    return select({ params, deps });
+    const { timePeriodId } = params;
+
+    return select(timePeriodId, deps);
 }

@@ -1,8 +1,8 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const timeperiod = require('../domain/timeperiod');
-const instance = require('../domain/instance');
+const timeperiod = require('../../domain/timeperiod');
+const instance = require('../../domain/instance');
 
 /**
  * NOTE: creates when id is omitted, otherwise updates; name is optional (blank clears it); startTs/endTs accept a timestamp or a date string
@@ -47,10 +47,6 @@ exports.action = async function({ params={}, context={}, deps }) {
     const { id, timePeriodId } = params;
     const name = (params.name || '').trim();
 
-    assert(timePeriodId, 'timePeriodId is required');
-    assert(params.startTs, 'startTs is required');
-    assert(params.endTs, 'endTs is required');
-    assert(params.timeZone, 'timeZone is required');
     assert(instance.isTimeZone(params.timeZone), `timeZone is not a valid IANA time zone (timeZone=${params.timeZone})`);
 
     const startTs = toTs(params.startTs, 'startTs');
