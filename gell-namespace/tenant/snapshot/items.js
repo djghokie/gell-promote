@@ -3,7 +3,7 @@ const assert = require('assert');
 const tenantLookup = require('gell-promote/gell-namespace/tenant/snapshot/tenant');
 const member = require('gell-promote/gell-web/member/domain/member');
 
-const typeItems = require('gell-promote/gell-metadata/snapshot/items');
+const typeItems = require('gell-promote/gell-metadata/domain/type/snapshot/items');
 
 // NOTE: name of the namespace TENANT-scoped types are registered with (<prefix>-integration/domain/types.js)
 const NAMESPACE = 'TENANT';

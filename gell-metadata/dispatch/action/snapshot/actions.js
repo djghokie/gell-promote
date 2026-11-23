@@ -14,10 +14,8 @@ exports.__metadata = {
 /**
  * NOTE: registry.__events is the registry's temporary map of registered modules (see gell-discover registry)
  */
-exports.effect = async function({ params={}, deps }) {
-    const { logger, registry } = deps.resolve('logger', 'registry');
-
-    logger.info('executing effect (name="gell.domain.actions")');
+function listActions(deps) {
+    const { registry } = deps.resolve('registry');
 
     return Object.keys(registry.__events)
         .map(name => registry.snapshotAttribute(name))
@@ -25,4 +23,18 @@ exports.effect = async function({ params={}, deps }) {
         ;
 }
 
-exports.api = exports.effect;
+exports.effect = async function({ params={}, deps }) {
+    const { logger } = deps.resolve('logger');
+
+    logger.info('executing effect (name="gell.domain.actions")');
+
+    return listActions(deps);
+}
+
+exports.api = async function({ params={}, deps }) {
+    const { logger } = deps.resolve('logger');
+
+    logger.info('executing api (name="gell.domain.actions")');
+
+    return listActions(deps);
+}

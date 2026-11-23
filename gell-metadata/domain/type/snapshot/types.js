@@ -19,11 +19,8 @@ exports.__metadata = {
  *
  * WIP: reads namespacedTypes directly; the registry should expose an accessor for a TYPE's namespace
  */
-exports.effect = async function({ params={}, deps }) {
-    const { logger } = deps.resolve('logger');
+function listTypes(deps) {
     const types = deps.resolveSingle({ name: 'types', optional: true });
-
-    logger.info('executing effect (name="gell.domain.types")');
 
     // NOTE: without the types registry no TYPEs are registered
     if (!types) return [];
@@ -34,4 +31,18 @@ exports.effect = async function({ params={}, deps }) {
         ;
 }
 
-exports.api = exports.effect;
+exports.effect = async function({ params={}, deps }) {
+    const { logger } = deps.resolve('logger');
+
+    logger.info('executing effect (name="gell.domain.types")');
+
+    return listTypes(deps);
+}
+
+exports.api = async function({ params={}, deps }) {
+    const { logger } = deps.resolve('logger');
+
+    logger.info('executing api (name="gell.domain.types")');
+
+    return listTypes(deps);
+}

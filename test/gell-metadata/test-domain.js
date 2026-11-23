@@ -8,20 +8,20 @@ const { Types } = require('../../gell-discover/domain/types');
 const tenant = require('../../gell-namespace/domain/tenant');
 
 const note = require('./modules/domain/note');
-const typesSnapshot = require('../../gell-metadata/snapshot/types');
-const typeSnapshot = require('../../gell-metadata/snapshot/type');
-const itemsSnapshot = require('../../gell-metadata/snapshot/items');
-const actionsSnapshot = require('../../gell-metadata/snapshot/actions');
-const snapshotsSnapshot = require('../../gell-metadata/snapshot/snapshots');
-const actionSnapshot = require('../../gell-metadata/snapshot/action');
-const snapshotSnapshot = require('../../gell-metadata/snapshot/snapshot');
+const typesSnapshot = require('../../gell-metadata/domain/type/snapshot/types');
+const typeSnapshot = require('../../gell-metadata/domain/type/snapshot/type');
+const itemsSnapshot = require('../../gell-metadata/domain/type/snapshot/items');
+const actionsSnapshot = require('../../gell-metadata/dispatch/action/snapshot/actions');
+const snapshotsSnapshot = require('../../gell-metadata/dispatch/snapshot/snapshot/snapshots');
+const actionSnapshot = require('../../gell-metadata/dispatch/action/snapshot/action');
+const snapshotSnapshot = require('../../gell-metadata/dispatch/snapshot/snapshot/snapshot');
 const queriesSnapshot = require('../../gell-metadata/store/query/snapshot/queries');
 const querySnapshot = require('../../gell-metadata/store/query/snapshot/query');
 const queryRunSnapshot = require('../../gell-metadata/store/query/snapshot/run');
 const operationsSnapshot = require('../../gell-metadata/store/operation/snapshot/operations');
 const operationSnapshot = require('../../gell-metadata/store/operation/snapshot/operation');
-const jobsSnapshot = require('../../gell-metadata/snapshot/jobs');
-const jobSnapshot = require('../../gell-metadata/snapshot/job');
+const jobsSnapshot = require('../../gell-metadata/job/snapshot/jobs');
+const jobSnapshot = require('../../gell-metadata/job/snapshot/job');
 
 describe('gell-metadata', function() {
     before(runtime.beforeAll);
