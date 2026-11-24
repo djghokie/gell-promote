@@ -201,4 +201,37 @@ describe('arguments middleware', function() {
             ]);
         })
     })
+
+    describe('enum', function() {
+        beforeEach(function() {
+            event.__invocationSpec.triggerSpec.params.color = { type: 'string', optional: true, enum: ['red', 'blue'] };
+        })
+
+        it('accepts a listed value', async function() {
+            event.params.color = 'red';
+
+            await middleware(event, resume);
+
+            assert(resumed);
+        })
+
+        it('does not check an omitted optional argument', async function() {
+            await middleware(event, resume);
+
+            assert(resumed);
+        })
+
+        it('fails for a value that is not listed', async function() {
+            event.params.color = 'plaid';
+
+            await assert.rejects(async () => middleware(event, resume), e => {
+                assert.deepStrictEqual(e.errors, [{ parameter: 'color', rule: 'enum', message: 'color must be one of red, blue' }]);
+                assert.strictEqual(e.status, 400);
+
+                return true;
+            });
+
+            assert(!resumed);
+        })
+    })
 })

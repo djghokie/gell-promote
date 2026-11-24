@@ -34,6 +34,10 @@ function checkParam(name, spec, val) {
         }
     }
 
+    if (Array.isArray(spec.enum) && !spec.enum.includes(val)) {
+        return [{ parameter: name, rule: 'enum', message: `${name} must be one of ${spec.enum.join(', ')}` }];
+    }
+
     return [];
 }
 
