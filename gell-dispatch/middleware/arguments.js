@@ -14,18 +14,14 @@ function isMissing(val) {
 }
 
 /**
- * Rules (in a param spec's validate) for string arguments, in the order they are checked (the first failure is reported)
- *  - minLength/maxLength: number of characters
- *  - pattern: a regular expression source string (or RegExp); it is not anchored, so use ^ and $ to match the whole
- *    value
- *
- * NOTE: declare pattern as a string: a RegExp does not survive JSON, so the action page could not show it
+ * Rules implementation by param type: { check(name, value, rules) => { rule, message } | undefined }
+ *  - check runs for a provided argument: it checks the type, then the type's rules from the param's validate, and
+ *    returns the first failure
+ *  - a type without an entry is not checked (only the rules every type shares: required, enum, a validate function)
  */
-const STRING_RULES = [
-    ['minLength', (val, min) => val.length >= min, (name, min) => min === 1 ? `${name} cannot be empty` : `${name} must be at least ${min} characters`],
-    ['maxLength', (val, max) => val.length <= max, (name, max) => `${name} must be at most ${max} characters`],
-    ['pattern', (val, pattern) => new RegExp(pattern).test(val), (name, pattern) => `${name} must match ${pattern}`],
-];
+const TYPE_RULES = {
+    string: require('../rules/string'),
+};
 
 /**
  * Failures ({ parameter, rule, message }) of one argument against its param spec
@@ -45,13 +41,10 @@ function checkParam(name, spec, val, values) {
     // NOTE: omitted optional parameters are not type checked
     if (val === undefined) return [];
 
-    if (spec.type === 'string') {
-        if (!_.isString(val)) return failure('type', `${name} must be a string`);
+    const typeRules = TYPE_RULES[spec.type];
+    const typeFailure = typeRules && typeRules.check(name, val, rules);
 
-        for (const [rule, check, message] of STRING_RULES) {
-            if (rules[rule] !== undefined && !check(val, rules[rule])) return failure(rule, message(name, rules[rule]));
-        }
-    }
+    if (typeFailure) return failure(typeFailure.rule, typeFailure.message);
 
     if (Array.isArray(rules.enum) && !rules.enum.includes(val)) {
         return failure('enum', `${name} must be one of ${rules.enum.join(', ')}`);
