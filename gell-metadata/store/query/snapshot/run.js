@@ -16,14 +16,14 @@ exports.__metadata = {
             params: {
                 name: 'string',
                 args: { type: 'object', optional: true },
-                limit: { type: 'number', optional: true }
+                limit: { type: 'number', optional: true, validate: { min: 1, max: MAX_LIMIT } }
             }
         },
         api: {
             params: {
                 name: 'string',
                 args: { type: 'object', optional: true },
-                limit: { type: 'number', optional: true }
+                limit: { type: 'number', optional: true, validate: { min: 1, max: MAX_LIMIT } }
             }
         }
     }
@@ -108,6 +108,7 @@ exports.effect = async function({ params={}, deps }) {
 
     if (!query$) return;
 
+    // NOTE: the dispatch bus rejects a limit outside 1..MAX_LIMIT (params' validate); clamping still guards direct calls
     const limit_ = Math.min(Math.max(parseInt(limit) || DEFAULT_LIMIT, 1), MAX_LIMIT);
 
     const queryArgs = coerceArgs(query$, parseArgs(args));

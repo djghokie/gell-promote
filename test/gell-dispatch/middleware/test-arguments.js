@@ -404,4 +404,41 @@ describe('arguments middleware', function() {
             await assert.rejects(async () => middleware(event, resume), /broken check/);
         })
     })
+
+    describe('number rules', function() {
+        beforeEach(function() {
+            event.__invocationSpec.triggerSpec.params.limit = { type: 'number', optional: true, validate: { min: 1, max: 1000 } };
+        })
+
+        it('fails a number out of range', async function() {
+            event.params.limit = '0';
+
+            await assert.rejects(async () => middleware(event, resume), e => {
+                assert.deepStrictEqual(e.errors, [{ parameter: 'limit', rule: 'min', message: 'limit must be at least 1' }]);
+
+                return true;
+            });
+        })
+
+        it('fails a value that is not a number', async function() {
+            event.params.limit = 'lots';
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: limit must be a number/);
+        })
+
+        it('passes a blank optional argument', async function() {
+            event.params.limit = '';
+
+            await middleware(event, resume);
+
+            assert(resumed);
+        })
+
+        it('reports a blank required argument as required', async function() {
+            event.__invocationSpec.triggerSpec.params.limit.optional = false;
+            event.params.limit = '';
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: limit is required/);
+        })
+    })
 })

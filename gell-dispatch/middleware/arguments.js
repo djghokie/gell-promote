@@ -21,6 +21,7 @@ function isMissing(val) {
  */
 const TYPE_RULES = {
     string: require('../rules/string'),
+    number: require('../rules/number'),
 };
 
 /**
