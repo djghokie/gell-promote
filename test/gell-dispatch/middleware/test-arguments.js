@@ -312,4 +312,96 @@ describe('arguments middleware', function() {
             await accepts(undefined);
         })
     })
+
+    describe('validate function', function() {
+        let calls;
+
+        beforeEach(function() {
+            calls = [];
+
+            Object.assign(event.__invocationSpec.triggerSpec.params, {
+                startTs: 'number',
+                endTs: {
+                    type: 'number',
+                    validate: (endTs, params) => {
+                        calls.push([endTs, params]);
+
+                        return params.startTs < endTs || 'startTs must be before endTs';
+                    },
+                },
+            });
+        })
+
+        it('passes the value and a map of the other arguments', async function() {
+            event.params = { startTs: 1, endTs: 2 };
+
+            await middleware(event, resume);
+
+            assert.deepStrictEqual(calls, [[2, { startTs: 1 }]]);
+            assert(resumed);
+        })
+
+        it('fails with the message the function returns', async function() {
+            event.params = { startTs: 2, endTs: 1 };
+
+            await assert.rejects(async () => middleware(event, resume), e => {
+                assert.strictEqual(e.status, 400);
+                assert.deepStrictEqual(e.errors, [{ parameter: 'endTs', rule: 'validate', message: 'startTs must be before endTs' }]);
+
+                return true;
+            });
+
+            assert(!resumed);
+        })
+
+        it('fails with a generic message when the function returns false', async function() {
+            event.__invocationSpec.triggerSpec.params.endTs.validate = () => false;
+            event.params = { startTs: 1, endTs: 2 };
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: endTs is not valid/);
+        })
+
+        it('passes when the function returns undefined', async function() {
+            event.__invocationSpec.triggerSpec.params.endTs.validate = () => undefined;
+            event.params = { startTs: 1, endTs: 2 };
+
+            await middleware(event, resume);
+
+            assert(resumed);
+        })
+
+        it('is not called for a missing required argument', async function() {
+            event.params = { startTs: 1 };
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: endTs is required/);
+
+            assert.deepStrictEqual(calls, []);
+        })
+
+        it('is not called for an omitted optional argument', async function() {
+            event.__invocationSpec.triggerSpec.params.endTs.optional = true;
+            event.params = { startTs: 1 };
+
+            await middleware(event, resume);
+
+            assert.deepStrictEqual(calls, []);
+            assert(resumed);
+        })
+
+        it('is not called when the type check fails', async function() {
+            event.__invocationSpec.triggerSpec.params.endTs.type = 'string';
+            event.params = { startTs: 1, endTs: 2 };
+
+            await assert.rejects(async () => middleware(event, resume), /endTs must be a string/);
+
+            assert.deepStrictEqual(calls, []);
+        })
+
+        it('propagates an error the function throws', async function() {
+            event.__invocationSpec.triggerSpec.params.endTs.validate = () => { throw new Error('broken check'); };
+            event.params = { startTs: 1, endTs: 2 };
+
+            await assert.rejects(async () => middleware(event, resume), /broken check/);
+        })
+    })
 })

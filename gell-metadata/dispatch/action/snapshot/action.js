@@ -1,5 +1,7 @@
 const assert = require('assert');
 
+const { describe } = require('../../../../gell-event/binding/compiler');
+
 exports.__metadata = {
     name: 'gell.domain.action',
     description: 'returns a registered action by name',
@@ -38,5 +40,5 @@ exports.api = async function({ params={}, deps }) {
 
     if (!action$) throw Object.assign(new Error(`action not found (name=${params.name})`), { status: 404 });
 
-    return action$;
+    return describe(action$);
 }

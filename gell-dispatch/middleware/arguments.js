@@ -1,6 +1,7 @@
 const _ = require('lodash');
 
 const ErrorState = require('../../gell/error');
+const { compileParams } = require('../../gell-event/binding/compiler');
 
 // NOTE: validation failures are the caller's fault, so the API answers them with 400 (gell-http/next/api uses e.status)
 const STATUS = 400;
@@ -10,10 +11,6 @@ const STATUS = 400;
  */
 function isMissing(val) {
     return val === undefined || val === null || val === '';
-}
-
-function normalizeSpec(spec) {
-    return typeof spec === 'string' ? { type: spec } : spec || {};
 }
 
 /**
@@ -32,13 +29,14 @@ const STRING_RULES = [
 
 /**
  * Failures ({ parameter, rule, message }) of one argument against its param spec
- *  - a param spec is 'string' shorthand or { type, optional, validate }; validate holds the rules, e.g.
+ *  - spec is a compiled param (gell-event/binding/compiler): { name, type, optional, validate }; validate holds the
+ *    rules (or is a function, see checkFunction), e.g.
  *      title: { type: 'string', validate: { minLength: 3, pattern: '^\\S', messages: { pattern: '...' } } }
  *  - message is readable: it names the parameter, and is what the client gets
  *  - validate.messages ({ [rule]: message }) overrides a rule's default message, e.g. a pattern's
  */
-function checkParam(name, spec, val) {
-    const rules = spec.validate || {};
+function checkParam(name, spec, val, values) {
+    const rules = _.isPlainObject(spec.validate) ? spec.validate : {};
 
     const failure = (rule, message) => [{ parameter: name, rule, message: (rules.messages || {})[rule] || message }];
 
@@ -59,7 +57,30 @@ function checkParam(name, spec, val) {
         return failure('enum', `${name} must be one of ${rules.enum.join(', ')}`);
     }
 
+    if (_.isFunction(spec.validate)) return checkFunction(name, spec.validate, val, _.omit(values, name));
+
     return [];
+}
+
+/**
+ * A param's validate may be a function instead of rules: validate(value, params)
+ *  - params is a map of the call's other arguments, for checks across parameters (e.g. startTs before endTs)
+ *  - returns true (or undefined) when valid, a string to fail with that (readable) message, or false to fail with a
+ *    generic one
+ *  - runs after the type check, and not for an omitted optional parameter
+ *
+ * NOTE: a function that throws is a bug in the check, not a validation failure, so the error propagates (500)
+ *
+ * WIP: synchronous only; an async check (e.g. a lookup) would need the middleware to await it
+ */
+function checkFunction(name, validate, val, params) {
+    const result = validate(val, params);
+
+    if (result === true || result === undefined) return [];
+
+    const message = _.isString(result) ? result : `${name} is not valid`;
+
+    return [{ parameter: name, rule: 'validate', message }];
 }
 
 /**
@@ -78,9 +99,9 @@ module.exports = function(event, resume) {
     if (!__invocationSpec) return resume(event);
 
     const { route, triggerSpec } = __invocationSpec;
-    const metadata = triggerSpec.params || {};
+    const params = compileParams(triggerSpec.params);
 
-    const errors = Object.keys(metadata).flatMap(n => checkParam(n, normalizeSpec(metadata[n]), (values || {})[n]));
+    const errors = Object.values(params).flatMap(spec => checkParam(spec.name, spec, (values || {})[spec.name], values || {}));
 
     if (errors.length) {
         const logger = event.deps && event.deps.resolveSingle({ name: 'logger', optional: true });

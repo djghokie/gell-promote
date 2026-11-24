@@ -215,7 +215,7 @@ describe('gell-metadata', function() {
 
             assert(create$, 'missing unittest.note.create');
             assert.strictEqual(create$.description, 'creates a NOTE');
-            assert.deepStrictEqual(create$.triggers.action.params, { title: 'string' });
+            assert.deepStrictEqual(create$.triggers.action.params, { title: { name: 'title', type: 'string' } });
         })
 
         it('excludes types and snapshots', async function() {
@@ -244,7 +244,7 @@ describe('gell-metadata', function() {
 
             assert(note$, 'missing unittest.note');
             assert.strictEqual(note$.description, 'returns a NOTE by id');
-            assert.deepStrictEqual(note$.triggers.api.params, { id: 'uuid' });
+            assert.deepStrictEqual(note$.triggers.api.params, { id: { name: 'id', type: 'uuid' } });
         })
 
         it('excludes types and actions', async function() {
@@ -275,7 +275,7 @@ describe('gell-metadata', function() {
 
             assert.strictEqual(action$.name, 'unittest.note.create');
             assert.strictEqual(action$.description, 'creates a NOTE');
-            assert.deepStrictEqual(action$.triggers.action, { params: { title: 'string' }, transaction: 'NEW' });
+            assert.deepStrictEqual(action$.triggers.action, { params: { title: { name: 'title', type: 'string' } }, transaction: 'NEW' });
         })
 
         it('reports a snapshot name as 404', async function() {
@@ -297,7 +297,7 @@ describe('gell-metadata', function() {
 
             assert.strictEqual(snapshot$.name, 'unittest.note');
             assert.strictEqual(snapshot$.description, 'returns a NOTE by id');
-            assert.deepStrictEqual(snapshot$.triggers.api, { params: { id: 'uuid' } });
+            assert.deepStrictEqual(snapshot$.triggers.api, { params: { id: { name: 'id', type: 'uuid' } } });
         })
 
         it('reports an action name as 404', async function() {

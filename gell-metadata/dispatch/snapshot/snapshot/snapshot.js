@@ -1,5 +1,7 @@
 const assert = require('assert');
 
+const { describe } = require('../../../../gell-event/binding/compiler');
+
 exports.__metadata = {
     name: 'gell.domain.snapshot',
     description: 'returns a registered snapshot by name',
@@ -38,5 +40,5 @@ exports.api = async function({ params={}, deps }) {
 
     if (!snapshot$) throw Object.assign(new Error(`snapshot not found (name=${params.name})`), { status: 404 });
 
-    return snapshot$;
+    return describe(snapshot$);
 }

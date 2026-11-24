@@ -1,3 +1,5 @@
+const { describe } = require('../../../../gell-event/binding/compiler');
+
 exports.__metadata = {
     name: 'gell.domain.actions',
     description: 'returns all registered actions',
@@ -36,5 +38,5 @@ exports.api = async function({ params={}, deps }) {
 
     logger.info('executing api (name="gell.domain.actions")');
 
-    return listActions(deps);
+    return listActions(deps).map(describe);
 }
