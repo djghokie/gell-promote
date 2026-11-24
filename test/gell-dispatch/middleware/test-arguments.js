@@ -135,7 +135,7 @@ describe('arguments middleware', function() {
 
         describe('max length', function() {
             beforeEach(function() {
-                event.__invocationSpec.triggerSpec.params.message.maxLength = 10;
+                event.__invocationSpec.triggerSpec.params.message.validate = { maxLength: 10 };
                 event.params.message = 'gello world!';
             })
 
@@ -204,7 +204,7 @@ describe('arguments middleware', function() {
 
     describe('enum', function() {
         beforeEach(function() {
-            event.__invocationSpec.triggerSpec.params.color = { type: 'string', optional: true, enum: ['red', 'blue'] };
+            event.__invocationSpec.triggerSpec.params.color = { type: 'string', optional: true, validate: { enum: ['red', 'blue'] } };
         })
 
         it('accepts a listed value', async function() {
@@ -232,6 +232,84 @@ describe('arguments middleware', function() {
             });
 
             assert(!resumed);
+        })
+    })
+
+    describe('string rules', function() {
+        function spec(validate, others={}) {
+            event.__invocationSpec.triggerSpec.params.title = { type: 'string', ...others, validate };
+        }
+
+        async function rejects(title, expected) {
+            event.params.title = title;
+
+            await assert.rejects(async () => middleware(event, resume), e => {
+                assert.deepStrictEqual(e.errors, [{ parameter: 'title', ...expected }]);
+
+                return true;
+            });
+
+            assert(!resumed);
+        }
+
+        async function accepts(title) {
+            event.params.title = title;
+
+            await middleware(event, resume);
+
+            assert(resumed);
+        }
+
+        it('minLength 1 says the argument cannot be empty', async function() {
+            spec({ minLength: 1 }, { optional: true });
+
+            await rejects('', { rule: 'minLength', message: 'title cannot be empty' });
+        })
+
+        it('minLength', async function() {
+            spec({ minLength: 3 });
+
+            await rejects('ab', { rule: 'minLength', message: 'title must be at least 3 characters' });
+            await accepts('abc');
+        })
+
+        it('maxLength', async function() {
+            spec({ maxLength: 2 });
+
+            await rejects('abc', { rule: 'maxLength', message: 'title must be at most 2 characters' });
+            await accepts('ab');
+        })
+
+        it('pattern (string)', async function() {
+            spec({ pattern: '^[A-Z]' });
+
+            await rejects('abc', { rule: 'pattern', message: 'title must match ^[A-Z]' });
+            await accepts('Abc');
+        })
+
+        it('pattern (RegExp)', async function() {
+            spec({ pattern: /^\d+$/ });
+
+            await rejects('12a', { rule: 'pattern', message: 'title must match /^\\d+$/' });
+            await accepts('123');
+        })
+
+        it('reports only the first failing rule of an argument', async function() {
+            spec({ minLength: 3, pattern: '^[A-Z]' });
+
+            await rejects('a', { rule: 'minLength', message: 'title must be at least 3 characters' });
+        })
+
+        it('messages overrides a rule\'s default message', async function() {
+            spec({ pattern: '^\\S', messages: { pattern: 'title cannot start with a space' } });
+
+            await rejects(' abc', { rule: 'pattern', message: 'title cannot start with a space' });
+        })
+
+        it('does not apply string rules to an omitted optional argument', async function() {
+            spec({ minLength: 3, pattern: '^[A-Z]' }, { optional: true });
+
+            await accepts(undefined);
         })
     })
 })

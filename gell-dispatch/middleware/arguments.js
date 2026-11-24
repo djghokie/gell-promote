@@ -17,25 +17,46 @@ function normalizeSpec(spec) {
 }
 
 /**
+ * Rules (in a param spec's validate) for string arguments, in the order they are checked (the first failure is reported)
+ *  - minLength/maxLength: number of characters
+ *  - pattern: a regular expression source string (or RegExp); it is not anchored, so use ^ and $ to match the whole
+ *    value
+ *
+ * NOTE: declare pattern as a string: a RegExp does not survive JSON, so the action page could not show it
+ */
+const STRING_RULES = [
+    ['minLength', (val, min) => val.length >= min, (name, min) => min === 1 ? `${name} cannot be empty` : `${name} must be at least ${min} characters`],
+    ['maxLength', (val, max) => val.length <= max, (name, max) => `${name} must be at most ${max} characters`],
+    ['pattern', (val, pattern) => new RegExp(pattern).test(val), (name, pattern) => `${name} must match ${pattern}`],
+];
+
+/**
  * Failures ({ parameter, rule, message }) of one argument against its param spec
+ *  - a param spec is 'string' shorthand or { type, optional, validate }; validate holds the rules, e.g.
+ *      title: { type: 'string', validate: { minLength: 3, pattern: '^\\S', messages: { pattern: '...' } } }
  *  - message is readable: it names the parameter, and is what the client gets
+ *  - validate.messages ({ [rule]: message }) overrides a rule's default message, e.g. a pattern's
  */
 function checkParam(name, spec, val) {
-    if (isMissing(val) && !spec.optional) return [{ parameter: name, rule: 'required', message: `${name} is required` }];
+    const rules = spec.validate || {};
+
+    const failure = (rule, message) => [{ parameter: name, rule, message: (rules.messages || {})[rule] || message }];
+
+    if (isMissing(val) && !spec.optional) return failure('required', `${name} is required`);
 
     // NOTE: omitted optional parameters are not type checked
     if (val === undefined) return [];
 
     if (spec.type === 'string') {
-        if (!_.isString(val)) return [{ parameter: name, rule: 'type', message: `${name} must be a string` }];
+        if (!_.isString(val)) return failure('type', `${name} must be a string`);
 
-        if (spec.maxLength && val.length > spec.maxLength) {
-            return [{ parameter: name, rule: 'maxLength', message: `${name} must be at most ${spec.maxLength} characters` }];
+        for (const [rule, check, message] of STRING_RULES) {
+            if (rules[rule] !== undefined && !check(val, rules[rule])) return failure(rule, message(name, rules[rule]));
         }
     }
 
-    if (Array.isArray(spec.enum) && !spec.enum.includes(val)) {
-        return [{ parameter: name, rule: 'enum', message: `${name} must be one of ${spec.enum.join(', ')}` }];
+    if (Array.isArray(rules.enum) && !rules.enum.includes(val)) {
+        return failure('enum', `${name} must be one of ${rules.enum.join(', ')}`);
     }
 
     return [];
