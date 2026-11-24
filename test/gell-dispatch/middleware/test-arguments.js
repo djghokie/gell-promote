@@ -65,9 +65,26 @@ describe('arguments middleware', function() {
                 assert.fail('should have thrown exception');
             } catch (e) {
                 assert.strictEqual(e.name, 'RequiredParameterError');
+                assert.strictEqual(e.status, 400);
             }
 
             assert(!resumed);
+        })
+
+        for (const blank of [null, '']) {
+            it(`fails if required argument is ${JSON.stringify(blank)}`, async function() {
+                event.params.message = blank;
+
+                await assert.rejects(async () => middleware(event, resume), e => e.name === 'RequiredParameterError' && e.status === 400 && e.parameter === 'message');
+
+                assert(!resumed);
+            })
+        }
+
+        it('answers a type failure with status 400', async function() {
+            event.params.message = 7;
+
+            await assert.rejects(async () => middleware(event, resume), e => e.name === 'ParameterValidationError' && e.status === 400);
         })
 
         describe('optional', function() {
@@ -76,6 +93,14 @@ describe('arguments middleware', function() {
             })
 
             it('does not fail if argument is not provided', async function() {
+                await middleware(event, resume);
+
+                assert(resumed);
+            })
+
+            it('does not fail if argument is blank', async function() {
+                event.params.message = '';
+
                 await middleware(event, resume);
 
                 assert(resumed);
@@ -122,6 +147,22 @@ describe('arguments middleware', function() {
 
                 assert(!resumed);
             })
+        })
+    })
+
+    describe('shorthand spec', function() {
+        beforeEach(function() {
+            event.__invocationSpec.triggerSpec.params.message = 'string';
+        })
+
+        it('fails if required argument is not provided', async function() {
+            await assert.rejects(async () => middleware(event, resume), /RequiredParameterError/);
+        })
+
+        it('fails if argument is not a string', async function() {
+            event.params.message = 7;
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError/);
         })
     })
 })

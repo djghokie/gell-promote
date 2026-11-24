@@ -8,6 +8,20 @@ const MESSAGE_REQUIRED_PARAMETER = 'call to event trigger (route="%s") does not 
 const MESSAGE_PARAMETER_MAXLENGTH = 'call to event trigger (route="%s") has argument (name="%s") that exceeds maximum allowed length';
 const MESSAGE_PARAMETER_TYPE = 'call to event trigger (route="%s") has argument (name="%s") that is not of type (type="%s")';
 
+// NOTE: validation failures are the caller's fault, so the API answers them with 400 (gell-http/next/api uses e.status)
+const STATUS = 400;
+
+/**
+ * NOTE: null and '' count as not provided, so a blank form field fails here (400) rather than in the handler's assert (500)
+ */
+function isMissing(val) {
+    return val === undefined || val === null || val === '';
+}
+
+function normalizeSpec(spec) {
+    return typeof spec === 'string' ? { type: spec } : spec || {};
+}
+
 /**
  * gell-dispatch middleware that validates event invocation parameters against the event metadata
  * 
@@ -26,12 +40,13 @@ module.exports = function(event, resume) {
 
     const keys = Object.keys(metadata || {});
     keys.forEach(n => {
-        const param = metadata[n];
-        const val = values[n];
+        const param = normalizeSpec(metadata[n]);
+        const val = (values || {})[n];
 
-        if (val === undefined && !param.optional) {
+        if (isMissing(val) && !param.optional) {
             const e = new ErrorState();
             e.set('name', 'RequiredParameterError');
+            e.set('status', STATUS);
             e.set('route', __invocationSpec.route);
             e.set('parameter', n);
             e.set('message', format(MESSAGE_REQUIRED_PARAMETER, 'route', 'parameter'));
@@ -46,6 +61,7 @@ module.exports = function(event, resume) {
             if (!_.isString(val)) {
                 const e = new ErrorState();
                 e.set('name', 'ParameterValidationError');
+                e.set('status', STATUS);
                 e.set('route', __invocationSpec.route);
                 e.set('parameter', n);
                 e.set('type', param.type);
@@ -58,6 +74,8 @@ module.exports = function(event, resume) {
                 if (val.length > param.maxLength) {
                     const e = new ErrorState();
                     e.set('name', 'ParameterValidationError');
+                    e.set('status', STATUS);
+                e.set('status', STATUS);
                     e.set('route', __invocationSpec.route);
                     e.set('parameter', n);
                     e.set('message', format(MESSAGE_PARAMETER_MAXLENGTH, 'route', 'parameter'));
