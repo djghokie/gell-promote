@@ -110,7 +110,7 @@ describe('gell-runtime/mocha', function() {
     })
 
     it('rejects missing required params', async function() {
-        await assert.rejects(this.action({ route: 'unittest.thing.create#action', params: {} }), /RequiredParameterError/);
+        await assert.rejects(this.action({ route: 'unittest.thing.create#action', params: {} }), /ParameterValidationError: name is required/);
     })
 
     /**

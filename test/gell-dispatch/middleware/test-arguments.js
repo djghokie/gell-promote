@@ -51,8 +51,10 @@ describe('arguments middleware', function() {
                 assert.fail('should have thrown exception');
             } catch (e) {
                 assert.strictEqual(e.name, 'ParameterValidationError');
-                assert.strictEqual(e.parameter, 'message');
-                assert.strictEqual(e.message, 'call to event trigger (route="unittest.event") has argument (name="message") that is not of type (type="string")');
+                assert.strictEqual(e.status, 400);
+                assert.strictEqual(e.route, 'unittest.event');
+                assert.deepStrictEqual(e.errors, [{ parameter: 'message', rule: 'type', message: 'message must be a string' }]);
+                assert.strictEqual(e.message, 'message must be a string');
             }
 
             assert(!resumed);
@@ -64,8 +66,10 @@ describe('arguments middleware', function() {
 
                 assert.fail('should have thrown exception');
             } catch (e) {
-                assert.strictEqual(e.name, 'RequiredParameterError');
+                assert.strictEqual(e.name, 'ParameterValidationError');
                 assert.strictEqual(e.status, 400);
+                assert.deepStrictEqual(e.errors, [{ parameter: 'message', rule: 'required', message: 'message is required' }]);
+                assert.strictEqual(e.message, 'message is required');
             }
 
             assert(!resumed);
@@ -75,7 +79,7 @@ describe('arguments middleware', function() {
             it(`fails if required argument is ${JSON.stringify(blank)}`, async function() {
                 event.params.message = blank;
 
-                await assert.rejects(async () => middleware(event, resume), e => e.name === 'RequiredParameterError' && e.status === 400 && e.parameter === 'message');
+                await assert.rejects(async () => middleware(event, resume), e => e.name === 'ParameterValidationError' && e.status === 400 && e.errors[0].parameter === 'message' && e.errors[0].rule === 'required');
 
                 assert(!resumed);
             })
@@ -141,8 +145,9 @@ describe('arguments middleware', function() {
 
                     assert.fail('should have thrown exception');
                 } catch (e) {
-                    // console.debug('#####', e);
                     assert.strictEqual(e.name, 'ParameterValidationError');
+                    assert.strictEqual(e.errors[0].rule, 'maxLength');
+                    assert.strictEqual(e.message, 'message must be at most 10 characters');
                 }
 
                 assert(!resumed);
@@ -156,13 +161,44 @@ describe('arguments middleware', function() {
         })
 
         it('fails if required argument is not provided', async function() {
-            await assert.rejects(async () => middleware(event, resume), /RequiredParameterError/);
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: message is required/);
         })
 
         it('fails if argument is not a string', async function() {
             event.params.message = 7;
 
             await assert.rejects(async () => middleware(event, resume), /ParameterValidationError/);
+        })
+    })
+
+    describe('several parameters', function() {
+        beforeEach(function() {
+            Object.assign(event.__invocationSpec.triggerSpec.params, { title: 'string', id: { type: 'string' } });
+        })
+
+        it('reports every failure in one error', async function() {
+            event.params.id = 7;
+
+            await assert.rejects(async () => middleware(event, resume), e => {
+                assert.strictEqual(e.errors.length, 2);
+                assert.strictEqual(e.message, 'title is required; id must be a string');
+
+                return true;
+            });
+
+            assert(!resumed);
+        })
+
+        it('logs each failure', async function() {
+            const lines = [];
+            event.deps = { resolveSingle: () => ({ info: line => lines.push(line) }) };
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError/);
+
+            assert.deepStrictEqual(lines, [
+                'parameter validation failed (route="unittest.event"; parameter="title"; rule="required")',
+                'parameter validation failed (route="unittest.event"; parameter="id"; rule="required")',
+            ]);
         })
     })
 })

@@ -238,8 +238,8 @@ describe('event bus', function() {
 
                 // console.debug('#####', e);
 
-                assert.strictEqual(name, 'RequiredParameterError');
-                assert.strictEqual(message, 'call to event trigger (route="paramterized#effect") does not provide required argument (name="message")');
+                assert.strictEqual(name, 'ParameterValidationError');
+                assert.strictEqual(message, 'message is required');
             }
         })
 

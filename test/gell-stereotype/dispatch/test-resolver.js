@@ -86,7 +86,7 @@ describe('gell-stereotype/dispatch/resolver', function() {
     })
 
     it('validates params with the inherited trigger spec', async function() {
-        await assert.rejects(this.action({ route: 'WIDGET$thing.create#action', params: {} }), /RequiredParameterError/);
+        await assert.rejects(this.action({ route: 'WIDGET$thing.create#action', params: {} }), /ParameterValidationError/);
     })
 
     // NOTE: the bus's transaction middleware still adds $txn to the caller's context (as for regular events)
