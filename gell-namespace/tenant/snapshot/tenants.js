@@ -1,8 +1,8 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const tenant = require('gell-promote/gell-namespace/domain/tenant');
-const active = require('gell-promote/gell-namespace/snapshot/active');
+const tenant = require('../../domain/tenant');
+const active = require('../../snapshot/active');
 
 exports.__metadata = {
     name: 'namespace.tenants.active',

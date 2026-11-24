@@ -1,4 +1,4 @@
-const { Stereotypes } = require('gell-promote/gell-stereotype/domain/stereotypes');
+const { Stereotypes } = require('../domain/stereotypes');
 
 exports.beforeEach = function() {
     this.stereotypes = new Stereotypes();

@@ -1,7 +1,7 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const namespace = require('gell-promote/gell-namespace/domain/namespace');
+const namespace = require('../domain/namespace');
 
 exports.__metadata = {
     name: 'namespaces.active',

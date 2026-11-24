@@ -1,8 +1,8 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const application = require('gell-promote/gell-namespace/domain/application');
-const active = require('gell-promote/gell-namespace/snapshot/active');
+const application = require('../../domain/application');
+const active = require('../../snapshot/active');
 
 exports.__metadata = {
     name: 'namespace.applications.active',

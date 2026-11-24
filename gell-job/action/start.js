@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const { createInitiate } = require('gell-promote/gell-session/util/event');
+const { createInitiate } = require('../../gell-session/util/event');
 
 const end = require('gell-session/event/end');
 const update = require('gell-session/event/update');

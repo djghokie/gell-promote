@@ -4,7 +4,7 @@ const _ = require('lodash');
 const { init } = require('gell/future');
 
 const DependencyContainer = require('gell-dependency/container');
-const discover = require('gell-promote/gell-discover/node');
+const discover = require('../gell-discover/node');
 const { Types } = require('../gell-discover/domain/types');
 
 const { runtimeLogger } = require('gell-runtime/logger');

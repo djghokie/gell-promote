@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const document = require('gell-promote/gell-document/domain/document');
+const document = require('../domain/document');
 
 exports.__metadata = {
     name: 'document',
