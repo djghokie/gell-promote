@@ -24,6 +24,8 @@ const TYPE_RULES = {
     number: require('../rules/number'),
     boolean: require('../rules/boolean'),
     timestamp: require('../rules/timestamp'),
+    array: require('../rules/array'),
+    object: require('../rules/object'),
 };
 
 /**
