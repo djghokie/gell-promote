@@ -14,7 +14,7 @@ function isMissing(val) {
 }
 
 /**
- * Rules implementation by param type: { check(name, value, rules) => { rule, message } | undefined }
+ * Rules implementation by param type: { check(name, value, rules, { checkItem }) => { rule, message } | undefined }
  *  - check runs for a provided argument: it checks the type, then the type's rules from the param's validate, and
  *    returns the first failure
  *  - a type without an entry is not checked (only the rules every type shares: required, a validate function, and
@@ -48,7 +48,7 @@ function checkParam(name, spec, val, values) {
     if (val === undefined) return [];
 
     const typeRules = TYPE_RULES[spec.type];
-    const typeFailure = typeRules && typeRules.check(name, val, rules);
+    const typeFailure = typeRules && typeRules.check(name, val, rules, { checkItem });
 
     if (typeFailure) return failure(typeFailure.rule, typeFailure.message);
 
@@ -62,6 +62,14 @@ function checkParam(name, spec, val, values) {
     if (_.isFunction(spec.validate)) return checkFunction(name, spec.validate, val, _.omit(values, name));
 
     return [];
+}
+
+/**
+ * The failure ({ rule, message }) of one array item against the array's items spec (a compiled param), checked like
+ * a param named name[index] (an item has no other params to pass a validate function)
+ */
+function checkItem(name, spec, val) {
+    return checkParam(name, spec, val, {})[0];
 }
 
 /**

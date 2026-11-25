@@ -30,6 +30,26 @@ describe('array rules', function() {
         assert.strictEqual(array.check('tags', ['a', 'b'], { maxItems: 2 }), undefined);
     })
 
+    describe('items', function() {
+        const checkItem = (name, spec, val) => typeof val === spec ? undefined : { rule: 'type', message: `${name} must be a ${spec}` };
+
+        it('reports the first failing item, named by its index', function() {
+            assert.deepStrictEqual(array.check('tags', ['a', 1, 2], { items: 'string' }, { checkItem }), { rule: 'items', message: 'tags[1] must be a string' });
+        })
+
+        it('passes when every item passes', function() {
+            assert.strictEqual(array.check('tags', ['a', 'b'], { items: 'string' }, { checkItem }), undefined);
+        })
+
+        it('checks the other rules first', function() {
+            assert.strictEqual(array.check('tags', [1, 2, 3], { maxItems: 2, items: 'string' }, { checkItem }).rule, 'maxItems');
+        })
+
+        it('is not checked without checkItem', function() {
+            assert.strictEqual(array.check('tags', [1], { items: 'string' }), undefined);
+        })
+    })
+
     it('lists its rules in the order they are checked', function() {
         assert.deepStrictEqual(array.RULES.map(([rule]) => rule), ['minItems', 'maxItems']);
     })

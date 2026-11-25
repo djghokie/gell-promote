@@ -12,6 +12,7 @@ const _ = require('lodash');
  *  - 'string' shorthand is the param's type
  *  - { type, optional, validate }: validate holds the rules ({ minLength, maxLength, pattern, enum, messages }) or
  *    is a function (value, params) (see gell-dispatch/middleware/arguments)
+ *  - an array's validate.items is the spec of each item, compiled like a param (named 'items')
  *
  * WIP: support non-standard properties (copied as-is), like gell-domain's attribute
  *
@@ -34,7 +35,7 @@ function param(name, spec) {
     const compiled = { name };
     if (type !== undefined) compiled.type = type;
     if (optional !== undefined) compiled.optional = optional;
-    if (validate !== undefined) compiled.validate = validate;
+    if (validate !== undefined) compiled.validate = compileValidate(validate);
 
     if (_.isPlainObject(spec)) {
         Object.keys(spec).forEach(k => {
@@ -47,6 +48,26 @@ function param(name, spec) {
     }
 
     return compiled;
+}
+
+/**
+ * Compiles a param's validate: a function stays as-is; rules compile their items spec (arrays)
+ */
+function compileValidate(validate) {
+    if (!_.isPlainObject(validate) || validate.items === undefined) return validate;
+
+    return { ...validate, items: param('items', validate.items) };
+}
+
+/**
+ * Describes a compiled param: a validate function becomes '_function_', also in an items spec
+ */
+function describeParam(p) {
+    if (typeof p.validate === 'function') return { ...p, validate: '_function_' };
+
+    if (_.isPlainObject(p.validate) && p.validate.items) return { ...p, validate: { ...p.validate, items: describeParam(p.validate.items) } };
+
+    return p;
 }
 
 /**
@@ -108,7 +129,7 @@ function describe(metadata={}) {
         compiled.triggers = _.mapValues(compiled.triggers, trigger => {
             if (!trigger.params) return trigger;
 
-            const params = _.mapValues(trigger.params, p => typeof p.validate === 'function' ? { ...p, validate: '_function_' } : p);
+            const params = _.mapValues(trigger.params, describeParam);
 
             return { ...trigger, params };
         });

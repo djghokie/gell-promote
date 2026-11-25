@@ -1,6 +1,9 @@
 /**
  * Argument rules for the 'array' param type (see gell-dispatch/middleware/arguments TYPE_RULES)
  *  - minItems/maxItems: number of items
+ *  - items: the spec of each item, like a param's ('string' or { type, optional, validate }); each item is checked
+ *    by the caller's checkItem (the arguments middleware checks it like a param named name[index]), after the other
+ *    rules, and the first failing item is reported
  *
  * NOTE: strict: only an array passes (a JSON string does not); a param that must also accept a JSON string (e.g. a
  * GET argument) declares 'object', which accepts arrays
@@ -22,16 +25,27 @@ const RULES = [
  *
  * @param {*} name the param's name (messages name it)
  * @param {*} val the argument
- * @param {*} rules the param's validate rules ({ minItems, maxItems, ... })
+ * @param {*} rules the param's validate rules ({ minItems, maxItems, items, ... })
+ * @param {*} options
+ *  - checkItem(name, spec, value): the failure ({ rule, message }) of one item, or undefined; items is not checked
+ *    without it
  * @returns the first failure ({ rule, message }), or undefined when the argument passes
  */
-function check(name, val, rules={}) {
+function check(name, val, rules={}, { checkItem }={}) {
     if (val === '' || val === null) return;
 
     if (!Array.isArray(val)) return { rule: 'type', message: `${name} must be an array` };
 
     for (const [rule, test, message] of RULES) {
         if (rules[rule] !== undefined && !test(val, rules[rule])) return { rule, message: message(name, rules[rule]) };
+    }
+
+    if (rules.items !== undefined && checkItem) {
+        for (let i = 0; i < val.length; i++) {
+            const failure = checkItem(`${name}[${i}]`, rules.items, val[i]);
+
+            if (failure) return { rule: 'items', message: failure.message };
+        }
     }
 }
 

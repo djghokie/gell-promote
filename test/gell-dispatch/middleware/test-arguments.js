@@ -466,4 +466,65 @@ describe('arguments middleware', function() {
             await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: id must be one of a/);
         })
     })
+
+    describe('array items', function() {
+        function spec(items, others={}) {
+            event.__invocationSpec.triggerSpec.params.tags = { type: 'array', validate: { items, ...others } };
+        }
+
+        it('checks each item against its type and rules', async function() {
+            spec({ type: 'string', validate: { maxLength: 3 } });
+            event.params.tags = ['a', 'abcd'];
+
+            await assert.rejects(async () => middleware(event, resume), e => {
+                assert.deepStrictEqual(e.errors, [{ parameter: 'tags', rule: 'items', message: 'tags[1] must be at most 3 characters' }]);
+
+                return true;
+            });
+        })
+
+        it('accepts string shorthand for the items spec', async function() {
+            spec('number');
+            event.params.tags = [1, '2', 'x'];
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: tags\[2\] must be a number/);
+        })
+
+        it('reports a missing item as required', async function() {
+            spec('string');
+            event.params.tags = ['a', null];
+
+            await assert.rejects(async () => middleware(event, resume), /tags\[1\] is required/);
+        })
+
+        it('checks an item enum', async function() {
+            spec({ type: 'string', validate: { enum: ['red', 'blue'] } });
+            event.params.tags = ['red', 'plaid'];
+
+            await assert.rejects(async () => middleware(event, resume), /tags\[1\] must be one of red, blue/);
+        })
+
+        it('runs an item validate function', async function() {
+            spec({ type: 'string', validate: tag => tag !== 'x' || 'x is reserved' });
+            event.params.tags = ['a', 'x'];
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: x is reserved/);
+        })
+
+        it('checks items of nested arrays', async function() {
+            spec({ type: 'array', validate: { items: 'number' } });
+            event.params.tags = [[1, 2], [3, 'x']];
+
+            await assert.rejects(async () => middleware(event, resume), /tags\[1\]\[1\] must be a number/);
+        })
+
+        it('passes valid items', async function() {
+            spec({ type: 'string', validate: { maxLength: 3 } }, { maxItems: 2 });
+            event.params.tags = ['a', 'abc'];
+
+            await middleware(event, resume);
+
+            assert(resumed);
+        })
+    })
 })

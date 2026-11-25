@@ -38,6 +38,13 @@ describe('gell-event compiler', function() {
             assert.deepStrictEqual(compiler.param('id', { type: 'string', description: 'the id' }), { name: 'id', type: 'string', description: 'the id' });
         })
 
+        it('compiles an array\'s items spec like a param', function() {
+            assert.deepStrictEqual(
+                compiler.param('tags', { type: 'array', validate: { maxItems: 3, items: 'string' } }),
+                { name: 'tags', type: 'array', validate: { maxItems: 3, items: { name: 'items', type: 'string' } } }
+            );
+        })
+
         it('requires a name', function() {
             assert.throws(() => compiler.param(undefined, 'string'), /param name is required/);
         })
@@ -81,6 +88,14 @@ describe('gell-event compiler', function() {
             const described = compiler.describe(metadata);
 
             assert.deepStrictEqual(described.triggers.action.params.endTs, { name: 'endTs', type: 'timestamp', validate: '_function_' });
+        })
+
+        it('replaces a validate function in an items spec', function() {
+            const described = compiler.describe({ name: 'x', triggers: { action: { params: {
+                tags: { type: 'array', validate: { items: { type: 'string', validate: tag => tag !== 'x' } } },
+            } } } });
+
+            assert.deepStrictEqual(described.triggers.action.params.tags.validate.items, { name: 'items', type: 'string', validate: '_function_' });
         })
 
         it('keeps validate rules', function() {
