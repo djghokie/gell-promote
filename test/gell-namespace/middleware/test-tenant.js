@@ -5,8 +5,8 @@ const runtime = require('../../../gell-runtime/mocha');
 const resolver = require('gell-session/dispatch/resolver');
 
 const MockStore = require('../../../gell-aws-dynamodb/mock/store');
-const bus = require('../../../gell-dispatch/bus');
-const attributes = require('../../../gell-dispatch/middleware/attributes');
+const bus = require('gell-dispatch/bus');
+const attributes = require('gell-dispatch/middleware/attributes');
 const { Types } = require('../../../gell-discover/domain/types');
 const browser = require('../../../gell-web/domain/browser');
 

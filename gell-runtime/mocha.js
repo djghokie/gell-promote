@@ -9,11 +9,11 @@ const { Types } = require('../gell-discover/domain/types');
 
 const { runtimeLogger } = require('gell-runtime/logger');
 
-const bus = require('../gell-dispatch/bus');
+const bus = require('gell-dispatch/bus');
 const resolver = require('../gell-stereotype/dispatch/resolver');
 const stereotypeMiddleware = require('../gell-stereotype/middleware/extension');
-const attributeMiddleware = require('../gell-dispatch/middleware/attributes');
-const argumentMiddleware = require('../gell-dispatch/middleware/arguments');
+const attributeMiddleware = require('gell-dispatch/middleware/attributes');
+const argumentMiddleware = require('gell-dispatch/middleware/arguments');
 const transactionMiddleware = require('../gell-aws-dynamodb/middleware/transaction');
 
 /**

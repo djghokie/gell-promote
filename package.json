@@ -14,6 +14,7 @@
     "gell": "^1.18.0",
     "gell-aws-dynamodb": "^0.24.0",
     "gell-calendar": "^0.0.1",
+    "gell-dispatch": "^0.0.1",
     "gell-domain": "^1.0.0",
     "gell-runtime": "^0.7.0",
     "gell-schedule": "^0.3.2",
