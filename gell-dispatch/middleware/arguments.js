@@ -17,7 +17,8 @@ function isMissing(val) {
  * Rules implementation by param type: { check(name, value, rules) => { rule, message } | undefined }
  *  - check runs for a provided argument: it checks the type, then the type's rules from the param's validate, and
  *    returns the first failure
- *  - a type without an entry is not checked (only the rules every type shares: required, enum, a validate function)
+ *  - a type without an entry is not checked (only the rules every type shares: required, a validate function, and
+ *    enum, which a type's module may implement itself, e.g. number compares as numbers)
  */
 const TYPE_RULES = {
     string: require('../rules/string'),
@@ -51,7 +52,10 @@ function checkParam(name, spec, val, values) {
 
     if (typeFailure) return failure(typeFailure.rule, typeFailure.message);
 
-    if (Array.isArray(rules.enum) && !rules.enum.includes(val)) {
+    // NOTE: enum by exact match, unless the type's rules implement it
+    const typeEnum = typeRules && typeRules.RULES.some(([rule]) => rule === 'enum');
+
+    if (!typeEnum && Array.isArray(rules.enum) && !rules.enum.includes(val)) {
         return failure('enum', `${name} must be one of ${rules.enum.join(', ')}`);
     }
 

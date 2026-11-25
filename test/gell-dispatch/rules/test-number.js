@@ -41,11 +41,19 @@ describe('number rules', function() {
         assert.strictEqual(number.check('limit', '1000', { max: 1000 }), undefined);
     })
 
+    it('enum, compared as numbers', function() {
+        assert.deepStrictEqual(number.check('size', 3, { enum: [1, 2, 4] }), { rule: 'enum', message: 'size must be one of 1, 2, 4' });
+        assert.deepStrictEqual(number.check('size', '3', { enum: [1, 2, 4] }), { rule: 'enum', message: 'size must be one of 1, 2, 4' });
+        assert.strictEqual(number.check('size', 4, { enum: [1, 2, 4] }), undefined);
+        assert.strictEqual(number.check('size', '4', { enum: [1, 2, 4] }), undefined);
+        assert.strictEqual(number.check('size', 0.5, { enum: [0.5, 1] }), undefined);
+    })
+
     it('reports the first failing rule', function() {
         assert.strictEqual(number.check('limit', 5, { min: 10, max: 1 }).rule, 'min');
     })
 
     it('lists its rules in the order they are checked', function() {
-        assert.deepStrictEqual(number.RULES.map(([rule]) => rule), ['min', 'max']);
+        assert.deepStrictEqual(number.RULES.map(([rule]) => rule), ['min', 'max', 'enum']);
     })
 })

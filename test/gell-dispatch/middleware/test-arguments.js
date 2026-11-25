@@ -441,4 +441,29 @@ describe('arguments middleware', function() {
             await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: limit is required/);
         })
     })
+
+    describe('enum by type', function() {
+        it('number enum matches a numeric string (GET argument)', async function() {
+            event.__invocationSpec.triggerSpec.params.size = { type: 'number', validate: { enum: [1, 2, 4] } };
+            event.params.size = '2';
+
+            await middleware(event, resume);
+
+            assert(resumed);
+        })
+
+        it('number enum fails a value that is not listed', async function() {
+            event.__invocationSpec.triggerSpec.params.size = { type: 'number', validate: { enum: [1, 2, 4] } };
+            event.params.size = 3;
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: size must be one of 1, 2, 4/);
+        })
+
+        it('a type without its own enum is matched exactly', async function() {
+            event.__invocationSpec.triggerSpec.params.id = { type: 'uuid', validate: { enum: ['a'] } };
+            event.params.id = 'b';
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: id must be one of a/);
+        })
+    })
 })

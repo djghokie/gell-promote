@@ -5,6 +5,7 @@ const _ = require('lodash');
  *  - minLength/maxLength: number of characters
  *  - pattern: a regular expression source string (or RegExp); it is not anchored, so use ^ and $ to match the whole
  *    value
+ *  - enum: the allowed values
  *
  * NOTE: declare pattern as a string: a RegExp does not survive JSON, so the action page could not show it
  */
@@ -16,6 +17,7 @@ const RULES = [
     ['minLength', (val, min) => val.length >= min, (name, min) => min === 1 ? `${name} cannot be empty` : `${name} must be at least ${min} characters`],
     ['maxLength', (val, max) => val.length <= max, (name, max) => `${name} must be at most ${max} characters`],
     ['pattern', (val, pattern) => new RegExp(pattern).test(val), (name, pattern) => `${name} must match ${pattern}`],
+    ['enum', (val, values) => values.includes(val), (name, values) => `${name} must be one of ${values.join(', ')}`],
 ];
 
 /**

@@ -36,11 +36,16 @@ describe('string rules', function() {
         assert.strictEqual(string.check('title', 'a', { minLength: 3, maxLength: 0, pattern: '^[A-Z]' }).rule, 'minLength');
     })
 
+    it('enum', function() {
+        assert.deepStrictEqual(string.check('color', 'plaid', { enum: ['red', 'blue'] }), { rule: 'enum', message: 'color must be one of red, blue' });
+        assert.strictEqual(string.check('color', 'red', { enum: ['red', 'blue'] }), undefined);
+    })
+
     it('ignores rules it does not implement', function() {
-        assert.strictEqual(string.check('title', 'abc', { enum: ['x'], messages: { enum: 'nope' } }), undefined);
+        assert.strictEqual(string.check('title', 'abc', { min: 5, messages: { min: 'nope' } }), undefined);
     })
 
     it('lists its rules in the order they are checked', function() {
-        assert.deepStrictEqual(string.RULES.map(([rule]) => rule), ['minLength', 'maxLength', 'pattern']);
+        assert.deepStrictEqual(string.RULES.map(([rule]) => rule), ['minLength', 'maxLength', 'pattern', 'enum']);
     })
 })

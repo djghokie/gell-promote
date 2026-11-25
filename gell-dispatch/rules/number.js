@@ -1,6 +1,7 @@
 /**
  * Argument rules for the 'number' param type (see gell-dispatch/middleware/arguments TYPE_RULES)
  *  - min/max: inclusive bounds
+ *  - enum: the allowed values, compared as numbers (so '2', a GET argument, matches 2)
  *
  * NOTE: a numeric string ('12', '1.5') counts as a number: snapshot (api) arguments arrive as query string values
  * on a GET, so every value is a string. The handler still receives the argument as sent; it converts it
@@ -15,6 +16,7 @@
 const RULES = [
     ['min', (n, min) => n >= min, (name, min) => `${name} must be at least ${min}`],
     ['max', (n, max) => n <= max, (name, max) => `${name} must be at most ${max}`],
+    ['enum', (n, values) => values.map(toNumber).includes(n), (name, values) => `${name} must be one of ${values.join(', ')}`],
 ];
 
 /**
