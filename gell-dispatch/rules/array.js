@@ -1,5 +1,3 @@
-const { isBlank } = require('./type');
-
 /**
  * Argument rules for the 'array' param type (TYPE format: gell-dispatch/rules/type)
  *  - minItems/maxItems: number of items
@@ -7,13 +5,14 @@ const { isBlank } = require('./type');
  * NOTE: items (the spec of each item, like a param's) is not one of the type's rules: gell-dispatch/middleware/arguments
  * checks each item like a param named name[index], after these rules
  *
- * NOTE: strict: only an array passes (a JSON string does not); a param that must also accept a JSON string (e.g. a
- * GET argument) declares 'object', which accepts arrays
+ * NOTE: strict (no coerce): only an array passes (a JSON string does not); a param that must also accept a JSON
+ * string (e.g. a GET argument) declares 'object', which accepts arrays
  *
- * NOTE: a blank optional argument ('' or null) passes (skip)
+ * NOTE: a blank optional argument ('' or null) passes (allowBlank)
  */
-const TYPE = {
+module.exports = {
     name: 'array',
+    allowBlank: true,
     rules: {
         isArray: {
             default: true,
@@ -32,9 +31,4 @@ const TYPE = {
         },
     },
     default: ['isArray'],
-    skip: isBlank,
-};
-
-module.exports = {
-    TYPE,
 };

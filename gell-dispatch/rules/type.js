@@ -1,24 +1,29 @@
 const assert = require('assert');
 
 /**
- * Validates an argument against a param type's TYPE (gell-dispatch/rules/<type>.js)
+ * Validates an argument against a param type's TYPE (gell-dispatch/rules/<type>.js exports its TYPE)
  *
  * TYPE format
- *      const TYPE = {
- *          name: 'string',
+ *      module.exports = {
+ *          name: 'number',
+ *          allowBlank: true,
  *          rules: {
- *              isString: { default: true, test: val => ..., message: val => 'must be a string' },
- *              minLength: { type: 'number', test: (val, min) => ..., message: (val, min) => `must be at least ${min} characters` },
+ *              isNumber: { default: true, test: n => ..., message: () => 'must be a number' },
+ *              min: { type: 'number', test: (n, min) => ..., message: (n, min) => `must be at least ${min}` },
  *          },
- *          default: ['isString'],
- *          skip: val => ...,
+ *          default: ['isNumber'],
+ *          coerce: val => ...,
  *      }
  *  - rules: each rule's test(val, arg) answers whether the argument passes; message(val, arg) says why it does not,
  *    without the param's name (the caller prefixes it, e.g. 'title must be at least 3 characters')
  *      - type: the type of the rule's argument, as a param declares it in validate (e.g. minLength: 3)
  *  - default: rules that always run, first and in this order (the type check); their test takes only the argument
- *  - skip (optional): arguments the caller does not validate, e.g. a blank optional number ('' or null, an empty
- *    form field); gell-dispatch/middleware/arguments checks it before calling validate
+ *  - allowBlank (optional): a blank argument ('' or null, e.g. an empty form field of an optional param) passes
+ *    without its rules; a blank required argument is reported as required before validate runs
+ *  - coerce (optional): converts the argument (e.g. a GET argument's numeric string to a number) before the rules
+ *    run, so every rule's test and message get the coerced value
+ *
+ * NOTE: the coerced value is only for the rules; the handler still receives the argument as sent
  */
 
 /**
@@ -29,16 +34,21 @@ const assert = require('assert');
 const RESERVED = ['messages', 'items'];
 
 /**
- * Validates an argument: the TYPE's default rules, then the rules spec declares, in spec's order
+ * Validates an argument: a blank one passes when the TYPE allows blanks; otherwise the argument is coerced, then
+ * checked against the TYPE's default rules, then the rules spec declares, in spec's order
  *  - throws an Error (name RuleValidationError) for the first rule the argument fails; message is the rule's
  *    message (it does not name the param), and rule names the rule
  *  - a rule the TYPE does not define is a mistake in the param's metadata: it fails an assert (AssertionError)
  *
  * @param {*} TYPE the param type's TYPE
- * @param {*} val the argument
+ * @param {*} arg the argument (as sent)
  * @param {*} spec the rules to check, by name, with their arguments (e.g. { minLength: 3 })
  */
-function validate(TYPE, val, spec={}) {
+function validate(TYPE, arg, spec={}) {
+    if (TYPE.allowBlank && isBlank(arg)) return;
+
+    const val = TYPE.coerce ? TYPE.coerce(arg) : arg;
+
     TYPE.default.forEach(name => {
         const def = TYPE.rules[name];
 
@@ -61,7 +71,7 @@ function failure(rule, message) {
 }
 
 /**
- * A blank argument ('' or null), which TYPE.skip skips for most types
+ * A blank argument ('' or null), which passes a TYPE that allows blanks
  */
 function isBlank(val) {
     return val === '' || val === null;

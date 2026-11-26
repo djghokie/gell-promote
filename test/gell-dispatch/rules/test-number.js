@@ -4,15 +4,11 @@ const number = require('../../../gell-dispatch/rules/number');
 const type = require('../../../gell-dispatch/rules/type');
 
 /**
- * The failure of an argument, named like the arguments middleware names it (which skips what TYPE skips)
+ * The failure of an argument, named like the arguments middleware names it
  */
 function check(name, val, rules) {
-    const { TYPE } = number;
-
-    if (TYPE.skip && TYPE.skip(val)) return;
-
     try {
-        type.validate(TYPE, val, rules);
+        type.validate(number, val, rules);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 
@@ -72,7 +68,7 @@ describe('number rules', function() {
     })
 
     it('lists its rules in the order they are checked, the type check first', function() {
-        assert.deepStrictEqual(Object.keys(number.TYPE.rules), ['isNumber', 'min', 'max', 'enum']);
-        assert.deepStrictEqual(number.TYPE.default, ['isNumber']);
+        assert.deepStrictEqual(Object.keys(number.rules), ['isNumber', 'min', 'max', 'enum']);
+        assert.deepStrictEqual(number.default, ['isNumber']);
     })
 })

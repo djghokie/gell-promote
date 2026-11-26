@@ -4,15 +4,11 @@ const timestamp = require('../../../gell-dispatch/rules/timestamp');
 const type = require('../../../gell-dispatch/rules/type');
 
 /**
- * The failure of an argument, named like the arguments middleware names it (which skips what TYPE skips)
+ * The failure of an argument, named like the arguments middleware names it
  */
 function check(name, val, rules) {
-    const { TYPE } = timestamp;
-
-    if (TYPE.skip && TYPE.skip(val)) return;
-
     try {
-        type.validate(TYPE, val, rules);
+        type.validate(timestamp, val, rules);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 
@@ -28,12 +24,12 @@ describe('timestamp rules', function() {
     })
 
     it('passes a numeric string as epoch milliseconds (a GET argument)', function() {
-        assert.strictEqual(timestamp.toTs(String(JAN_1)), JAN_1);
+        assert.strictEqual(timestamp.coerce(String(JAN_1)), JAN_1);
         assert.strictEqual(check('dueTs', String(JAN_1)), undefined);
     })
 
     it('passes a date string', function() {
-        assert.strictEqual(timestamp.toTs('2026-01-01T00:00:00Z'), JAN_1);
+        assert.strictEqual(timestamp.coerce('2026-01-01T00:00:00Z'), JAN_1);
         assert.strictEqual(check('dueTs', '2026-01-01'), undefined);
     })
 
@@ -43,7 +39,7 @@ describe('timestamp rules', function() {
     })
 
     it('fails a value that is not a date', function() {
-        assert.deepStrictEqual(check('dueTs', 'someday'), { rule: 'isTimestamp', message: 'dueTs is not a valid date (value=someday)' });
+        assert.deepStrictEqual(check('dueTs', 'someday'), { rule: 'isTimestamp', message: 'dueTs is not a valid date' });
         assert.strictEqual(check('dueTs', true).rule, 'isTimestamp');
         assert.strictEqual(check('dueTs', {}).rule, 'isTimestamp');
     })
@@ -60,7 +56,7 @@ describe('timestamp rules', function() {
     })
 
     it('lists its rules in the order they are checked, the type check first', function() {
-        assert.deepStrictEqual(Object.keys(timestamp.TYPE.rules), ['isTimestamp', 'min', 'max']);
-        assert.deepStrictEqual(timestamp.TYPE.default, ['isTimestamp']);
+        assert.deepStrictEqual(Object.keys(timestamp.rules), ['isTimestamp', 'min', 'max']);
+        assert.deepStrictEqual(timestamp.default, ['isTimestamp']);
     })
 })

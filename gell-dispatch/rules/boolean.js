@@ -1,5 +1,3 @@
-const { isBlank } = require('./type');
-
 /**
  * Argument rules for the 'boolean' param type (TYPE format: gell-dispatch/rules/type)
  *  - no rules beyond the type
@@ -7,24 +5,29 @@ const { isBlank } = require('./type');
  * NOTE: 'true' and 'false' count as booleans: snapshot (api) arguments arrive as query string values on a GET. The
  * handler still receives the argument as sent ('false' is truthy, so a handler reading a GET argument converts it)
  *
- * NOTE: a blank optional argument ('' or null) passes (skip)
+ * NOTE: a blank optional argument ('' or null) passes (allowBlank)
  */
 
-const STRINGS = ['true', 'false'];
+/**
+ * An argument as a boolean ('true' and 'false' convert; anything else is left as sent)
+ */
+function coerce(val) {
+    if (val === 'true') return true;
+    if (val === 'false') return false;
 
-const TYPE = {
+    return val;
+}
+
+module.exports = {
     name: 'boolean',
+    allowBlank: true,
     rules: {
         isBoolean: {
             default: true,
-            test: val => typeof val === 'boolean' || STRINGS.includes(val),
+            test: val => typeof val === 'boolean',
             message: () => 'must be true or false',
         },
     },
     default: ['isBoolean'],
-    skip: isBlank,
-};
-
-module.exports = {
-    TYPE,
+    coerce,
 };

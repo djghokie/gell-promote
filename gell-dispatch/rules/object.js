@@ -1,7 +1,5 @@
 const _ = require('lodash');
 
-const { isBlank } = require('./type');
-
 /**
  * Argument rules for the 'object' param type (TYPE format: gell-dispatch/rules/type)
  *  - requiredKeys: keys a (plain) object argument must have, e.g. ['city']
@@ -11,13 +9,13 @@ const { isBlank } = require('./type');
  *  - a string passes when it parses as a JSON object or array (e.g. gell.domain.query.run's args on a GET); the
  *    handler still receives the string and parses it
  *
- * NOTE: a blank optional argument ('' or null) passes (skip)
+ * NOTE: a blank optional argument ('' or null) passes (allowBlank)
  */
 
 /**
  * An argument as an object or array (undefined when it is neither, nor a JSON string of one)
  */
-function toObject(val) {
+function coerce(val) {
     if (_.isPlainObject(val) || Array.isArray(val)) return val;
 
     if (typeof val === 'string') {
@@ -35,30 +33,22 @@ function missingKeys(obj, keys) {
     return keys.filter(key => obj[key] === undefined || obj[key] === null || obj[key] === '');
 }
 
-const TYPE = {
+module.exports = {
     name: 'object',
+    allowBlank: true,
     rules: {
         isObject: {
             default: true,
-            test: val => toObject(val) !== undefined,
+            test: obj => obj !== undefined,
             message: () => 'must be an object',
         },
         // NOTE: applies to plain objects only; an array argument has no keys to check
         requiredKeys: {
             type: 'array',
-            test: (val, keys) => {
-                const obj = toObject(val);
-
-                return Array.isArray(obj) || missingKeys(obj, keys).length === 0;
-            },
-            message: (val, keys) => `must have ${missingKeys(toObject(val), keys).join(', ')}`,
+            test: (obj, keys) => Array.isArray(obj) || missingKeys(obj, keys).length === 0,
+            message: (obj, keys) => `must have ${missingKeys(obj, keys).join(', ')}`,
         },
     },
     default: ['isObject'],
-    skip: isBlank,
-};
-
-module.exports = {
-    TYPE,
-    toObject,
+    coerce,
 };

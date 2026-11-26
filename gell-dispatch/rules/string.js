@@ -9,9 +9,9 @@ const _ = require('lodash');
  *
  * NOTE: declare pattern as a string: a RegExp does not survive JSON, so the action page could not show it
  *
- * NOTE: a blank string is checked (an optional '' still has to pass the rules it declares, e.g. an enum)
+ * NOTE: blanks are not allowed: an optional '' still has to pass the rules it declares (e.g. an enum)
  */
-const TYPE = {
+module.exports = {
     name: 'string',
     rules: {
         isString: {
@@ -41,8 +41,4 @@ const TYPE = {
         },
     },
     default: ['isString'],
-};
-
-module.exports = {
-    TYPE,
 };

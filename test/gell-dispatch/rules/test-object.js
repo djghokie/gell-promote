@@ -4,15 +4,11 @@ const object = require('../../../gell-dispatch/rules/object');
 const type = require('../../../gell-dispatch/rules/type');
 
 /**
- * The failure of an argument, named like the arguments middleware names it (which skips what TYPE skips)
+ * The failure of an argument, named like the arguments middleware names it
  */
 function check(name, val, rules) {
-    const { TYPE } = object;
-
-    if (TYPE.skip && TYPE.skip(val)) return;
-
     try {
-        type.validate(TYPE, val, rules);
+        type.validate(object, val, rules);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 
@@ -32,7 +28,7 @@ describe('object rules', function() {
     it('passes a JSON string of an object or array (a GET argument)', function() {
         assert.strictEqual(check('args', '{"type":"x"}'), undefined);
         assert.strictEqual(check('args', '[1,2]'), undefined);
-        assert.deepStrictEqual(object.toObject('{"type":"x"}'), { type: 'x' });
+        assert.deepStrictEqual(object.coerce('{"type":"x"}'), { type: 'x' });
     })
 
     it('passes a blank (optional) argument', function() {
@@ -61,7 +57,7 @@ describe('object rules', function() {
     })
 
     it('lists its rules in the order they are checked, the type check first', function() {
-        assert.deepStrictEqual(Object.keys(object.TYPE.rules), ['isObject', 'requiredKeys']);
-        assert.deepStrictEqual(object.TYPE.default, ['isObject']);
+        assert.deepStrictEqual(Object.keys(object.rules), ['isObject', 'requiredKeys']);
+        assert.deepStrictEqual(object.default, ['isObject']);
     })
 })

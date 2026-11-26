@@ -4,15 +4,11 @@ const boolean = require('../../../gell-dispatch/rules/boolean');
 const type = require('../../../gell-dispatch/rules/type');
 
 /**
- * The failure of an argument, named like the arguments middleware names it (which skips what TYPE skips)
+ * The failure of an argument, named like the arguments middleware names it
  */
 function check(name, val, rules) {
-    const { TYPE } = boolean;
-
-    if (TYPE.skip && TYPE.skip(val)) return;
-
     try {
-        type.validate(TYPE, val, rules);
+        type.validate(boolean, val, rules);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 

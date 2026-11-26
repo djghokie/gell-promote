@@ -54,6 +54,49 @@ describe('rules type validate', function() {
         assert.throws(() => type.validate(TYPE, 'abc', { messages: {} }), /no rule defined/);
     })
 
+    describe('allowBlank', function() {
+        const NUMBER = {
+            name: 'number',
+            allowBlank: true,
+            rules: {
+                isNumber: { default: true, test: n => Number.isFinite(n), message: () => 'must be a number' },
+                min: { type: 'number', test: (n, min) => n >= min, message: (n, min) => `must be at least ${min}` },
+            },
+            default: ['isNumber'],
+        };
+
+        it('passes a blank argument without its rules', function() {
+            type.validate(NUMBER, '', { min: 1 });
+            type.validate(NUMBER, null, { min: 1 });
+        })
+
+        it('checks a blank argument when the type does not allow blanks', function() {
+            assert.throws(() => type.validate(TYPE, null), failure('isString', 'must be a string'));
+            assert.throws(() => type.validate(TYPE, '', { minLength: 1 }), failure('minLength', 'must be at least 1 characters'));
+        })
+    })
+
+    describe('coerce', function() {
+        const NUMBER = {
+            name: 'number',
+            rules: {
+                isNumber: { default: true, test: n => Number.isFinite(n), message: n => `must be a number (value=${n})` },
+                max: { type: 'number', test: (n, max) => n <= max, message: (n, max) => `${n} must be at most ${max}` },
+            },
+            default: ['isNumber'],
+            coerce: val => typeof val === 'string' ? Number(val) : val,
+        };
+
+        it('runs the rules on the coerced argument', function() {
+            type.validate(NUMBER, '5', { max: 10 });
+        })
+
+        it('passes the coerced argument to messages', function() {
+            assert.throws(() => type.validate(NUMBER, '12', { max: 10 }), failure('max', '12 must be at most 10'));
+            assert.throws(() => type.validate(NUMBER, 'x'), failure('isNumber', 'must be a number (value=NaN)'));
+        })
+    })
+
     it('isBlank', function() {
         assert.strictEqual(type.isBlank(''), true);
         assert.strictEqual(type.isBlank(null), true);

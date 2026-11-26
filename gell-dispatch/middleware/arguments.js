@@ -29,12 +29,12 @@ function isMissing(val) {
  *    enum, matched exactly)
  */
 const TYPES = {
-    string: require('../rules/string').TYPE,
-    number: require('../rules/number').TYPE,
-    boolean: require('../rules/boolean').TYPE,
-    timestamp: require('../rules/timestamp').TYPE,
-    array: require('../rules/array').TYPE,
-    object: require('../rules/object').TYPE,
+    string: require('../rules/string'),
+    number: require('../rules/number'),
+    boolean: require('../rules/boolean'),
+    timestamp: require('../rules/timestamp'),
+    array: require('../rules/array'),
+    object: require('../rules/object'),
 };
 
 /**
@@ -78,15 +78,12 @@ function checkParam(name, spec, val, values) {
 /**
  * The failure ({ rule, message }) of an argument against its type's TYPE (gell-dispatch/rules/type validate), or
  * undefined when it passes
- *  - an argument the TYPE skips (e.g. a blank optional number) is not validated
  *  - the reserved validate keys (messages, items) are not the type's rules, so validate does not get them
  *
  * NOTE: only a RuleValidationError is a validation failure; anything else (e.g. the AssertionError for a rule the
  * type does not define) is a bug, so it propagates (500)
  */
 function checkType(TYPE, val, rules) {
-    if (TYPE.skip && TYPE.skip(val)) return;
-
     try {
         validate(TYPE, val, _.omit(rules, RESERVED));
     } catch (e) {

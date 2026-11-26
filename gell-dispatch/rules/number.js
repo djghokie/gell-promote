@@ -1,5 +1,3 @@
-const { isBlank } = require('./type');
-
 /**
  * Argument rules for the 'number' param type (TYPE format: gell-dispatch/rules/type)
  *  - min/max: inclusive bounds
@@ -8,48 +6,44 @@ const { isBlank } = require('./type');
  * NOTE: a numeric string ('12', '1.5') counts as a number: snapshot (api) arguments arrive as query string values
  * on a GET, so every value is a string. The handler still receives the argument as sent; it converts it
  *
- * NOTE: a blank optional argument ('' or null, e.g. an empty form field) passes (skip)
+ * NOTE: a blank optional argument ('' or null, e.g. an empty form field) passes (allowBlank)
  */
 
 /**
  * An argument as a number (NaN when it is not one)
  */
-function toNumber(val) {
+function coerce(val) {
     if (typeof val === 'number') return val;
     if (typeof val === 'string' && val.trim() !== '') return Number(val);
 
     return NaN;
 }
 
-const TYPE = {
+module.exports = {
     name: 'number',
+    allowBlank: true,
     rules: {
         isNumber: {
             default: true,
-            test: val => Number.isFinite(toNumber(val)),
+            test: n => Number.isFinite(n),
             message: () => 'must be a number',
         },
         min: {
             type: 'number',
-            test: (val, min) => toNumber(val) >= min,
-            message: (val, min) => `must be at least ${min}`,
+            test: (n, min) => n >= min,
+            message: (n, min) => `must be at least ${min}`,
         },
         max: {
             type: 'number',
-            test: (val, max) => toNumber(val) <= max,
-            message: (val, max) => `must be at most ${max}`,
+            test: (n, max) => n <= max,
+            message: (n, max) => `must be at most ${max}`,
         },
         enum: {
             type: 'array',
-            test: (val, values) => values.map(toNumber).includes(toNumber(val)),
-            message: (val, values) => `must be one of ${values.join(', ')}`,
+            test: (n, values) => values.map(coerce).includes(n),
+            message: (n, values) => `must be one of ${values.join(', ')}`,
         },
     },
     default: ['isNumber'],
-    skip: isBlank,
-};
-
-module.exports = {
-    TYPE,
-    toNumber,
+    coerce,
 };

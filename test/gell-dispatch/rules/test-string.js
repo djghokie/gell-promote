@@ -4,15 +4,11 @@ const string = require('../../../gell-dispatch/rules/string');
 const type = require('../../../gell-dispatch/rules/type');
 
 /**
- * The failure of an argument, named like the arguments middleware names it (which skips what TYPE skips)
+ * The failure of an argument, named like the arguments middleware names it
  */
 function check(name, val, rules) {
-    const { TYPE } = string;
-
-    if (TYPE.skip && TYPE.skip(val)) return;
-
     try {
-        type.validate(TYPE, val, rules);
+        type.validate(string, val, rules);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 
@@ -64,7 +60,7 @@ describe('string rules', function() {
     })
 
     it('lists its rules in the order they are checked, the type check first', function() {
-        assert.deepStrictEqual(Object.keys(string.TYPE.rules), ['isString', 'minLength', 'maxLength', 'pattern', 'enum']);
-        assert.deepStrictEqual(string.TYPE.default, ['isString']);
+        assert.deepStrictEqual(Object.keys(string.rules), ['isString', 'minLength', 'maxLength', 'pattern', 'enum']);
+        assert.deepStrictEqual(string.default, ['isString']);
     })
 })

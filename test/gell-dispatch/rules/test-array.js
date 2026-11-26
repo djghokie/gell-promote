@@ -4,15 +4,11 @@ const array = require('../../../gell-dispatch/rules/array');
 const type = require('../../../gell-dispatch/rules/type');
 
 /**
- * The failure of an argument, named like the arguments middleware names it (which skips what TYPE skips)
+ * The failure of an argument, named like the arguments middleware names it
  */
 function check(name, val, rules) {
-    const { TYPE } = array;
-
-    if (TYPE.skip && TYPE.skip(val)) return;
-
     try {
-        type.validate(TYPE, val, rules);
+        type.validate(array, val, rules);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 
@@ -51,7 +47,7 @@ describe('array rules', function() {
     // NOTE: items is checked by the arguments middleware (test/gell-dispatch/middleware/test-arguments.js)
 
     it('lists its rules in the order they are checked, the type check first', function() {
-        assert.deepStrictEqual(Object.keys(array.TYPE.rules), ['isArray', 'minItems', 'maxItems']);
-        assert.deepStrictEqual(array.TYPE.default, ['isArray']);
+        assert.deepStrictEqual(Object.keys(array.rules), ['isArray', 'minItems', 'maxItems']);
+        assert.deepStrictEqual(array.default, ['isArray']);
     })
 })
