@@ -11,6 +11,7 @@ const note = require('./modules/domain/note');
 const typesSnapshot = require('../../gell-metadata/domain/type/snapshot/types');
 const typeSnapshot = require('../../gell-metadata/domain/type/snapshot/type');
 const itemsSnapshot = require('../../gell-metadata/domain/type/snapshot/items');
+const attributesSnapshot = require('../../gell-metadata/dispatch/rule/snapshot/attributes');
 const actionsSnapshot = require('../../gell-metadata/dispatch/action/snapshot/actions');
 const snapshotsSnapshot = require('../../gell-metadata/dispatch/snapshot/snapshot/snapshots');
 const actionSnapshot = require('../../gell-metadata/dispatch/action/snapshot/action');
@@ -233,6 +234,41 @@ describe('gell-metadata', function() {
             const names = actions$.map(action$ => action$.name);
 
             assert.deepStrictEqual(names, [...names].sort());
+        })
+    })
+
+    describe('gell.domain.attributes', function() {
+        it('returns the param types, sorted by name', async function() {
+            const attributes$ = await attributesSnapshot.api({ params: {}, deps: this.deps });
+
+            assert.deepStrictEqual(attributes$.map(type$ => type$.name), ['array', 'boolean', 'integer', 'number', 'object', 'string', 'timestamp']);
+        })
+
+        it('describes a type and its rules as data', async function() {
+            const attributes$ = await attributesSnapshot.api({ params: {}, deps: this.deps });
+            const string$ = attributes$.find(type$ => type$.name === 'string');
+
+            assert.deepStrictEqual(string$, JSON.parse(JSON.stringify(string$)));
+            assert.strictEqual(string$.allowBlank, false);
+            assert.strictEqual(string$.coerce, false);
+            assert.deepStrictEqual(string$.default, ['isString']);
+            assert.deepStrictEqual(string$.rules.find(rule$ => rule$.name === 'isString'), { name: 'isString', default: true, definedBy: 'string' });
+            assert.deepStrictEqual(string$.rules.find(rule$ => rule$.name === 'minLength'), { name: 'minLength', type: 'number', default: false, definedBy: 'string' });
+        })
+
+        it('names the type each inherited rule is defined by', async function() {
+            const attributes$ = await attributesSnapshot.api({ params: {}, deps: this.deps });
+            const integer$ = attributes$.find(type$ => type$.name === 'integer');
+            const rule = name => integer$.rules.find(rule$ => rule$.name === name);
+
+            assert.strictEqual(integer$.extends, 'number');
+            assert.strictEqual(integer$.allowBlank, true);
+            assert.strictEqual(integer$.coerce, true);
+            assert.deepStrictEqual(integer$.default, ['isNumber', 'isInteger']);
+            assert.strictEqual(rule('isNumber').definedBy, 'number');
+            assert.strictEqual(rule('min').definedBy, 'number');
+            assert.strictEqual(rule('isInteger').definedBy, 'integer');
+            assert.strictEqual(rule('positive').definedBy, 'integer');
         })
     })
 
