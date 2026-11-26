@@ -2,7 +2,8 @@ const _ = require('lodash');
 
 const ErrorState = require('../../gell/error');
 const { compileParams } = require('../../gell-event/binding/compiler');
-const { RESERVED, TYPES, validate } = require('../rules/type');
+const { RESERVED, TYPES } = require('../rules/type');
+const { argument } = require('../validate');
 
 /**
  * NOTE: declarative param validation for the published gell-dispatch bus; replaces gell-dispatch/middleware/arguments
@@ -60,7 +61,7 @@ function checkParam(name, spec, val, values) {
 }
 
 /**
- * The failure ({ rule, message }) of an argument against its type's TYPE (gell-dispatch/rules/type validate), or
+ * The failure ({ rule, message }) of an argument against its type's TYPE (gell-dispatch/validate argument), or
  * undefined when it passes
  *  - TYPES (gell-dispatch/rules/type) maps param types to their TYPE; a type without one is not checked (only the
  *    rules every param shares: required, a validate function, and an enum, matched exactly)
@@ -71,7 +72,7 @@ function checkParam(name, spec, val, values) {
  */
 function checkType(TYPE, val, rules) {
     try {
-        validate(val, _.omit(rules, RESERVED), TYPE);
+        argument(val, _.omit(rules, RESERVED), TYPE);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 

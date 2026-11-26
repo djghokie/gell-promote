@@ -1,14 +1,14 @@
 const assert = require('assert');
 
 const string = require('../../../gell-dispatch/rules/string');
-const type = require('../../../gell-dispatch/rules/type');
+const { argument } = require('../../../gell-dispatch/validate');
 
 /**
  * The failure of an argument, named like the arguments middleware names it
  */
 function check(name, val, rules) {
     try {
-        type.validate(val, rules, string);
+        argument(val, rules, string);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 
