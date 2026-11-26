@@ -1,6 +1,6 @@
 const Store = require('gell-aws-dynamodb/mock/store');
-const queryWrapper = require('gell-aws-dynamodb/query-wrapper');
-const operationWrapper = require('gell-aws-dynamodb/operation-wrapper');
+const queryWrapper = require('../query-wrapper');
+const operationWrapper = require('../operation-wrapper');
 module.exports = class extends Store {
 
     configureQueries(...queries) {

@@ -77,6 +77,25 @@ describe('gell-dispatch/validate', function() {
             assert.throws(() => argument(1, { max: 'lots' }, number), e => e.name === 'AssertionError' && /rule argument is not a valid number \(type=number; rule=max/.test(e.message));
         })
 
+        it('checks a uuid', function() {
+            assert.strictEqual(argument('3f2b8c1e-9d4a-4e6b-8a7c-1d2e3f4a5b6c', undefined, TYPES.uuid), '3f2b8c1e-9d4a-4e6b-8a7c-1d2e3f4a5b6c');
+            assert.strictEqual(argument('3F2B8C1E-9D4A-4E6B-8A7C-1D2E3F4A5B6C', undefined, TYPES.uuid), '3F2B8C1E-9D4A-4E6B-8A7C-1D2E3F4A5B6C');
+            assert.throws(() => argument('note-1', undefined, TYPES.uuid), ruleFailure('isUuid', 'must be a UUID'));
+            assert.throws(() => argument('{3f2b8c1e-9d4a-4e6b-8a7c-1d2e3f4a5b6c}', undefined, TYPES.uuid), ruleFailure('isUuid', 'must be a UUID'));
+            assert.throws(() => argument(7, undefined, TYPES.uuid), ruleFailure('isString', 'must be a string'));
+        })
+
+        it('passes any value of type any', function() {
+            [0, '', null, 'x', [1], { a: 1 }].forEach(val => assert.deepStrictEqual(argument(val, undefined, TYPES.any), val));
+        })
+
+        it('checks a state', function() {
+            const state_ = { snapshot: () => ({}) };
+
+            assert.strictEqual(argument(state_, undefined, TYPES.state), state_);
+            assert.throws(() => argument({ id: 'x' }, undefined, TYPES.state), ruleFailure('isState', 'must be a gell entity (State)'));
+        })
+
         it('requires a ruleDef', function() {
             assert.throws(() => argument(1, { max: 5 }), /ruleDef is required/);
         })
@@ -146,7 +165,7 @@ describe('gell-dispatch/validate', function() {
         })
 
         it('fails an assert for a type it does not define', function() {
-            assert.throws(() => object({ id: 'x' }, { id: 'uuid' }), e => e.name === 'AssertionError' && /no type defined \(property=id; type=uuid\)/.test(e.message));
+            assert.throws(() => object({ id: 'x' }, { id: 'email' }), e => e.name === 'AssertionError' && /no type defined \(property=id; type=email\)/.test(e.message));
         })
 
         it('fails an assert for a validate function', function() {

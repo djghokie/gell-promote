@@ -6,7 +6,7 @@ const session = require('gell-session/domain/session');
 const javascript = require('gell-domain/binding/javascript');
 
 const MockStore = require('gell-aws-dynamodb/mock/store');
-const operationWrapper = require('gell-aws-dynamodb/operation-wrapper');
+const operationWrapper = require('../../../gell-aws-dynamodb/operation-wrapper');
 const sessionOperations = operationWrapper.ut(require('gell-session/dynamodb/operations'));
 
 const { createInitiate, createUpdate } = require('../../../gell-session/util/event');

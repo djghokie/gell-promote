@@ -1,9 +1,9 @@
-const sessionQueries = require('gell-session/dynamodb/queries');
+const sessionQueries = require('../../gell-session/dynamodb/queries');
 const activeQueries = require('gell-session/dynamodb/active/queries');
 const activityQueries = require('gell-session/dynamodb/activity/queries');
 
 const MockStore = require('gell-aws-dynamodb/mock/store');
-const queryWrapper = require('gell-aws-dynamodb/query-wrapper');
+const queryWrapper = require('../../gell-aws-dynamodb/query-wrapper');
 
 const user = require('gell-web/domain/user');
 

@@ -136,7 +136,7 @@ describe('rules type (validated with gell-dispatch/validate argument)', function
         })
 
         it('registers every param type', function() {
-            assert.deepStrictEqual(Object.keys(type.TYPES), ['string', 'number', 'boolean', 'timestamp', 'array', 'object', 'integer']);
+            assert.deepStrictEqual(Object.keys(type.TYPES), ['string', 'number', 'boolean', 'timestamp', 'array', 'object', 'integer', 'uuid', 'any', 'state']);
             Object.entries(type.TYPES).forEach(([name, TYPE]) => assert.strictEqual(TYPE.name, name));
         })
     })

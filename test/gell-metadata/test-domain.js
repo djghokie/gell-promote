@@ -243,7 +243,7 @@ describe('gell-metadata', function() {
         it('returns the param types, sorted by name', async function() {
             const attributes$ = await attributesSnapshot.api({ params: {}, deps: this.deps });
 
-            assert.deepStrictEqual(attributes$.map(type$ => type$.name), ['array', 'boolean', 'integer', 'number', 'object', 'string', 'timestamp']);
+            assert.deepStrictEqual(attributes$.map(type$ => type$.name), ['any', 'array', 'boolean', 'integer', 'number', 'object', 'state', 'string', 'timestamp', 'uuid']);
         })
 
         it('describes a type and its rules as data', async function() {
@@ -289,7 +289,7 @@ describe('gell-metadata', function() {
         })
 
         it('reports an unknown param type as 404', async function() {
-            await assert.rejects(lookupAttribute.call(this, 'uuid'), { status: 404 });
+            await assert.rejects(lookupAttribute.call(this, 'email'), { status: 404 });
             await assert.rejects(lookupAttribute.call(this, 'constructor'), { status: 404 });
         })
     })
@@ -329,7 +329,7 @@ describe('gell-metadata', function() {
         })
 
         it('reports an unknown param type as 404', async function() {
-            await assert.rejects(validateValue.call(this, { name: 'uuid', value: 'x' }), { status: 404 });
+            await assert.rejects(validateValue.call(this, { name: 'email', value: 'x' }), { status: 404 });
         })
     })
 
@@ -427,7 +427,7 @@ describe('gell-metadata', function() {
                 name: 'session.children',
                 description: 'retrieves all sessions with a specific type and parentId',
                 parameters: [
-                    { name: 'parentId', type: 'uuid', optional: false },
+                    { name: 'parentId', type: 'string', optional: false },
                     { name: 'type', type: 'string', optional: true },
                 ],
             });

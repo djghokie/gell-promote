@@ -2,9 +2,9 @@ const assert = require('assert');
 
 const runtime = require('gell-runtime/mocha');
 
-const sessionQueries = require('gell-session/dynamodb/queries');
+const sessionQueries = require('../../../gell-session/dynamodb/queries');
 const activityQueries = require('gell-session/dynamodb/activity/queries');
-const queryWrapper = require('gell-aws-dynamodb/query-wrapper');
+const queryWrapper = require('../../../gell-aws-dynamodb/query-wrapper');
 
 const MockStore = require('../../../gell-aws-dynamodb/mock/store');
 const { Types } = require('../../../gell-discover/domain/types');

@@ -2,7 +2,7 @@ const assert = require('assert');
 
 const runtime = require('gell-runtime/mocha');
 
-const queryWrapper = require('gell-aws-dynamodb/query-wrapper');
+const queryWrapper = require('../../../../../gell-aws-dynamodb/query-wrapper');
 
 const Store = require('../../../../../gell-aws-dynamodb/mock/store');
 const { Queries } = require('../../../../../gell-discover/domain/queries');

@@ -59,6 +59,9 @@ const DEFINITIONS = {
     array: require('./array'),
     object: require('./object'),
     integer: require('./integer'),
+    uuid: require('./uuid'),
+    any: require('./any'),
+    state: require('./state'),
 };
 
 /**

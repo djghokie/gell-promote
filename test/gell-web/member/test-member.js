@@ -3,7 +3,7 @@ const _ = require('lodash');
 
 const runtime = require('../../../gell-runtime/mocha');
 
-const operationWrapper = require('gell-aws-dynamodb/operation-wrapper');
+const operationWrapper = require('../../../gell-aws-dynamodb/operation-wrapper');
 const sessionOperations = operationWrapper.ut(require('gell-session/dynamodb/operations'));
 
 const bootstrap = require('../bootstrap');

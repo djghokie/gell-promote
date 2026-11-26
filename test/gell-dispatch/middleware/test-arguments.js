@@ -467,7 +467,7 @@ describe('arguments middleware', function() {
         })
 
         it('a type without its own enum is matched exactly', async function() {
-            event.__invocationSpec.triggerSpec.params.id = { type: 'uuid', validate: { enum: ['a'] } };
+            event.__invocationSpec.triggerSpec.params.id = { type: 'email', validate: { enum: ['a'] } };
             event.params.id = 'b';
 
             await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: id must be one of a/);
