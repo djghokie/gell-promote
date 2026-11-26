@@ -3,6 +3,13 @@ const _ = require('lodash');
 const ErrorState = require('../../gell/error');
 const { compileParams } = require('../../gell-event/binding/compiler');
 
+/**
+ * NOTE: declarative param validation for the published gell-dispatch bus; replaces gell-dispatch/middleware/arguments
+ * in a bus's middleware (the bus, attributes and roles middleware come from the gell-dispatch package)
+ *
+ * WIP: promote into the gell-dispatch package (with gell-dispatch/rules and gell-event/binding/compiler)
+ */
+
 // NOTE: validation failures are the caller's fault, so the API answers them with 400 (gell-http/next/api uses e.status)
 const STATUS = 400;
 

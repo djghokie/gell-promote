@@ -1,8 +1,8 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const application = require('gell-promote/gell-namespace/domain/application');
-const namespace = require('gell-promote/gell-namespace/snapshot/namespace');
+const application = require('../../domain/application');
+const namespace = require('../../snapshot/namespace');
 
 exports.__metadata = {
     name: 'namespace.application.lookup',

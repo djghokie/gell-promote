@@ -1,4 +1,4 @@
-const type = require('gell-promote/gell-discover/domain/type');
+const type = require('../../../../gell-discover/domain/type');
 
 exports.__metadata = {
     name: 'gell.domain.types',

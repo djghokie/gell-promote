@@ -4,15 +4,16 @@ const _ = require('lodash');
 const { init } = require('gell/future');
 
 const DependencyContainer = require('gell-dependency/container');
-const discover = require('gell-promote/gell-discover/node');
+const discover = require('../gell-discover/node');
 const { Types } = require('../gell-discover/domain/types');
 
 const { runtimeLogger } = require('gell-runtime/logger');
 
-const bus = require('../gell-dispatch/bus');
+const bus = require('gell-dispatch/bus');
 const resolver = require('../gell-stereotype/dispatch/resolver');
 const stereotypeMiddleware = require('../gell-stereotype/middleware/extension');
-const attributeMiddleware = require('../gell-dispatch/middleware/attributes');
+const attributeMiddleware = require('gell-dispatch/middleware/attributes');
+// NOTE: gell-promote's arguments middleware (declarative param rules) instead of the published gell-dispatch one
 const argumentMiddleware = require('../gell-dispatch/middleware/arguments');
 const transactionMiddleware = require('../gell-aws-dynamodb/middleware/transaction');
 

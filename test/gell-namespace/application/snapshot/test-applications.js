@@ -6,8 +6,8 @@ const stereotypeFixtures = require('../../../../gell-stereotype/ut/mocha');
 
 const bootstrap = require('../../bootstrap');
 
-const ecosystem = require('gell-promote/gell-namespace/domain/ecosystem');
-const application = require('gell-promote/gell-namespace/stereotype/application');
+const ecosystem = require('../../../../gell-namespace/domain/ecosystem');
+const application = require('../../../../gell-namespace/stereotype/application');
 
 describe('applications snapshot', function() {
     before(runtime.beforeAll);

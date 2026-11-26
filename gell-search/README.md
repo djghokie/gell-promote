@@ -58,7 +58,7 @@ const model = {
    load, changed searchable attributes, new engine).
 4. **Query**: register `snapshot/query.js`, adding the application's roles to its api trigger:
    ```js
-   const restrict = require('gell-promote/gell-dispatch/util/restrict');
+   const restrict = require('gell-dispatch/util/restrict');
 
    registry_.register(restrict(require('gell-promote/gell-search/snapshot/query'), ['admin']));
    ```

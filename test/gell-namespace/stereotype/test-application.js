@@ -10,8 +10,8 @@ const queryWrapper = require('gell-aws-dynamodb/query-wrapper');
 const runtime = require('../../../gell-runtime/mocha');
 const stereotypeFixtures = require('../../../gell-stereotype/ut/mocha');
 
-const ecosystem = require('gell-promote/gell-namespace/domain/ecosystem');
-const application = require('gell-promote/gell-namespace/stereotype/application');
+const ecosystem = require('../../../gell-namespace/domain/ecosystem');
+const application = require('../../../gell-namespace/stereotype/application');
 
 /**
  * NOTE: unlike test-applications, NAMESPACE#APPLICATION is not registered with the types registry, so the APPLICATION
@@ -69,7 +69,7 @@ describe('APPLICATION extension of the namespace stereotype', function() {
     })
 
     it('rejects a regular dispatch of namespace.create', async function() {
-        this.registerAction(require('gell-promote/gell-namespace/action/create'));
+        this.registerAction(require('../../../gell-namespace/action/create'));
 
         await assert.rejects(this.action({
             route: 'namespace.create#action',

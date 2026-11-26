@@ -1,7 +1,7 @@
 const javascript = require('gell-domain/binding/javascript');
 const session = require('gell-session/domain/session');
 
-const ecosystem = require('gell-promote/gell-namespace/domain/ecosystem');
+const ecosystem = require('../../gell-namespace/domain/ecosystem');
 
 const TYPE = 'GELL#JOB_EXECUTION';
 

@@ -1,6 +1,6 @@
-const { createUpdate } = require('gell-promote/gell-session/util/event');
+const { createUpdate } = require('../../../gell-session/util/event');
 
-const tenant = require('gell-promote/gell-namespace/domain/tenant');
+const tenant = require('../../domain/tenant');
 
 const __metadata = {
     name: 'namespace.tenant.update',

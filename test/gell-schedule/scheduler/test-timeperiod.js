@@ -2,8 +2,8 @@ const assert = require('assert');
 const _ = require('lodash');
 
 const materialize = require('gell/state/materialize');
-const stream = require('gell/stream/stream');
-const { array: arraySink } = require('gell/stream/sink');
+const { default: stream } = require('gell-streamz');
+const { array: arraySink } = require('gell-streamz/sink');
 
 const { TimePeriod } = require('gell-calendar/domain/timeperiod');
 const standard = require('gell-calendar/standard');

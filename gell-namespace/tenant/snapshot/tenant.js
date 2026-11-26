@@ -2,7 +2,7 @@ const assert = require('assert');
 
 const lookup = require('gell-session/snapshot/lookup');
 
-const tenant = require('gell-promote/gell-namespace/domain/tenant');
+const tenant = require('../../domain/tenant');
 
 exports.__metadata = {
     name: 'namespace.tenant.lookup',
