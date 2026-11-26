@@ -135,8 +135,91 @@ describe('rules type validate', function() {
         })
 
         it('registers every param type', function() {
-            assert.deepStrictEqual(Object.keys(type.TYPES), ['string', 'number', 'boolean', 'timestamp', 'array', 'object']);
+            assert.deepStrictEqual(Object.keys(type.TYPES), ['string', 'number', 'boolean', 'timestamp', 'array', 'object', 'integer']);
             Object.entries(type.TYPES).forEach(([name, TYPE]) => assert.strictEqual(TYPE.name, name));
+        })
+    })
+
+    describe('extends', function() {
+        const BASE = {
+            name: 'base',
+            allowBlank: true,
+            rules: {
+                isNumber: { test: n => Number.isFinite(n), message: () => 'must be a number' },
+                min: { type: 'number', test: (n, min) => n >= min, message: (n, min) => `must be at least ${min}` },
+                max: { type: 'number', test: (n, max) => n <= max, message: (n, max) => `must be at most ${max}` },
+            },
+            default: ['isNumber'],
+            coerce: val => typeof val === 'string' ? Number(val) : val,
+        };
+
+        const CHILD = {
+            name: 'child',
+            extends: 'base',
+            rules: {
+                isEven: { test: n => n % 2 === 0, message: () => 'must be even' },
+                max: { type: 'number', test: (n, max) => n < max, message: (n, max) => `must be below ${max}` },
+                positive: { type: 'boolean', test: (n, apply, inherited) => !apply || inherited.min.test(n, 1), message: (n, apply, inherited) => inherited.min.message(n, 1) },
+            },
+            default: ['isEven'],
+        };
+
+        const GRANDCHILD = {
+            name: 'grandchild',
+            extends: 'child',
+            rules: {
+                small: { type: 'boolean', test: (n, apply, inherited) => !apply || (inherited.positive.test(n, true) && inherited.max.test(n, 10)), message: () => 'must be small' },
+            },
+        };
+
+        const DEFINITIONS = { base: BASE, child: CHILD, grandchild: GRANDCHILD };
+        const resolved = name => type.resolve(DEFINITIONS[name], DEFINITIONS);
+
+        it("gets the parent's rules, its own replacing one of the same name", function() {
+            assert.deepStrictEqual(Object.keys(resolved('child').rules), ['isNumber', 'min', 'max', 'isEven', 'positive']);
+            assert.throws(() => type.validate(10, { max: 10 }, resolved('child')), failure('max', 'must be below 10'));
+        })
+
+        it("runs the parent's default rules first", function() {
+            assert.deepStrictEqual(resolved('child').default, ['isNumber', 'isEven']);
+            assert.throws(() => type.validate('x', undefined, resolved('child')), failure('isNumber', 'must be a number'));
+            assert.throws(() => type.validate(3, undefined, resolved('child')), failure('isEven', 'must be even'));
+        })
+
+        it("gets the parent's allowBlank and coerce", function() {
+            type.validate('', { min: 4 }, resolved('child'));
+            type.validate('4', { min: 4 }, resolved('child'));
+        })
+
+        it("builds on the parent's rules by name (inherited)", function() {
+            type.validate(2, { positive: true }, resolved('child'));
+            assert.throws(() => type.validate(0, { positive: true }, resolved('child')), failure('positive', 'must be at least 1'));
+        })
+
+        it("gives an inherited rule its own level's inherited (a chain)", function() {
+            const GRANDCHILD_TYPE = resolved('grandchild');
+
+            assert.deepStrictEqual(GRANDCHILD_TYPE.default, ['isNumber', 'isEven']);
+            type.validate(8, { small: true }, GRANDCHILD_TYPE);
+            assert.throws(() => type.validate(0, { small: true }, GRANDCHILD_TYPE), failure('small', 'must be small'));
+            // NOTE: child's max (below), not base's (at most)
+            assert.throws(() => type.validate(10, { small: true }, GRANDCHILD_TYPE), failure('small', 'must be small'));
+        })
+
+        it('validate resolves a definition it is given', function() {
+            const definition = { ...CHILD, extends: 'number' };
+
+            assert.throws(() => type.validate(3, undefined, definition), failure('isEven', 'must be even'));
+        })
+
+        it('rejects a type to extend that is not defined', function() {
+            assert.throws(() => type.resolve({ name: 'orphan', extends: 'nothing', rules: {} }, DEFINITIONS), /no type to extend \(type=orphan; extends=nothing\)/);
+        })
+
+        it('rejects a type that extends itself', function() {
+            const LOOP = { a: { name: 'a', extends: 'b' }, b: { name: 'b', extends: 'a' } };
+
+            assert.throws(() => type.resolve(LOOP.a, LOOP), /type extends itself \(type=a; chain=a > b > a\)/);
         })
     })
 
