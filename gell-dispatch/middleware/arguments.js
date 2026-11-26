@@ -85,7 +85,7 @@ function checkParam(name, spec, val, values) {
  */
 function checkType(TYPE, val, rules) {
     try {
-        validate(TYPE, val, _.omit(rules, RESERVED));
+        validate(val, _.omit(rules, RESERVED), TYPE);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 

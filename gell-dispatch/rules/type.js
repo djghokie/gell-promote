@@ -40,11 +40,13 @@ const RESERVED = ['messages', 'items'];
  *    message (it does not name the param), and rule names the rule
  *  - a rule the TYPE does not define is a mistake in the param's metadata: it fails an assert (AssertionError)
  *
- * @param {*} TYPE the param type's TYPE
  * @param {*} arg the argument (as sent)
- * @param {*} spec the rules to check, by name, with their arguments (e.g. { minLength: 3 })
+ * @param {*} spec the rules to check, by name, with their arguments (e.g. { minLength: 3 }); undefined for none
+ * @param {*} TYPE the param type's TYPE
  */
-function validate(TYPE, arg, spec={}) {
+function validate(arg, spec={}, TYPE) {
+    assert(TYPE, 'TYPE is required');
+
     if (TYPE.allowBlank && isBlank(arg)) return;
 
     const val = TYPE.coerce ? TYPE.coerce(arg) : arg;

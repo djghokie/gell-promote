@@ -8,7 +8,7 @@ const type = require('../../../gell-dispatch/rules/type');
  */
 function check(name, val, rules) {
     try {
-        type.validate(number, val, rules);
+        type.validate(val, rules, number);
     } catch (e) {
         if (e.name !== 'RuleValidationError') throw e;
 
