@@ -13,6 +13,7 @@ const typeSnapshot = require('../../gell-metadata/domain/type/snapshot/type');
 const itemsSnapshot = require('../../gell-metadata/domain/type/snapshot/items');
 const attributesSnapshot = require('../../gell-metadata/dispatch/rule/snapshot/attributes');
 const attributeSnapshot = require('../../gell-metadata/dispatch/rule/snapshot/attribute');
+const attributeValidateSnapshot = require('../../gell-metadata/dispatch/rule/snapshot/validate');
 const actionsSnapshot = require('../../gell-metadata/dispatch/action/snapshot/actions');
 const snapshotsSnapshot = require('../../gell-metadata/dispatch/snapshot/snapshot/snapshots');
 const actionSnapshot = require('../../gell-metadata/dispatch/action/snapshot/action');
@@ -290,6 +291,45 @@ describe('gell-metadata', function() {
         it('reports an unknown param type as 404', async function() {
             await assert.rejects(lookupAttribute.call(this, 'uuid'), { status: 404 });
             await assert.rejects(lookupAttribute.call(this, 'constructor'), { status: 404 });
+        })
+    })
+
+    describe('gell.domain.attribute.validate', function() {
+        async function validateValue(params) {
+            return attributeValidateSnapshot.api({ params, deps: this.deps });
+        }
+
+        it('passes a valid value and returns it coerced', async function() {
+            assert.deepStrictEqual(await validateValue.call(this, { name: 'integer', value: '4', rules: { positive: true, max: 12 } }), { valid: true, value: 4 });
+        })
+
+        it('reports the first rule a value fails', async function() {
+            assert.deepStrictEqual(await validateValue.call(this, { name: 'integer', value: 13, rules: { positive: true, max: 12 } }), { valid: false, rule: 'max', message: 'must be at most 12' });
+            assert.deepStrictEqual(await validateValue.call(this, { name: 'integer', value: 1.5 }), { valid: false, rule: 'isInteger', message: 'must be an integer' });
+        })
+
+        it('uses messages to override a message', async function() {
+            const result$ = await validateValue.call(this, { name: 'string', value: 'ab', rules: { minLength: 3, messages: { minLength: 'too short' } } });
+
+            assert.deepStrictEqual(result$, { valid: false, rule: 'minLength', message: 'too short' });
+        })
+
+        it('takes rules as a JSON string', async function() {
+            assert.deepStrictEqual(await validateValue.call(this, { name: 'number', value: '7', rules: '{"min":10}' }), { valid: false, rule: 'min', message: 'must be at least 10' });
+        })
+
+        it('reports a mistake in the rules', async function() {
+            const undefinedRule$ = await validateValue.call(this, { name: 'number', value: 1, rules: { minLength: 1 } });
+            const badArgument$ = await validateValue.call(this, { name: 'number', value: 1, rules: { max: 'lots' } });
+
+            assert.strictEqual(undefinedRule$.mistake, true);
+            assert.match(undefinedRule$.message, /no rule defined \(type=number; rule=minLength\)/);
+            assert.strictEqual(badArgument$.mistake, true);
+            assert.match(badArgument$.message, /rule argument is not a valid number/);
+        })
+
+        it('reports an unknown param type as 404', async function() {
+            await assert.rejects(validateValue.call(this, { name: 'uuid', value: 'x' }), { status: 404 });
         })
     })
 
