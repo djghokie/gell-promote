@@ -21,17 +21,41 @@ exports.__metadata = {
                 id: { type: 'string', optional: true },
                 timePeriodId: 'string',
                 name: { type: 'string', optional: true },
-                startTs: 'timestamp',
-                endTs: 'timestamp',
-                timeZone: 'string',
+                // NOTE: checked by the app's dispatch bus (gell-promote/gell-dispatch/middleware/arguments)
+                startTs: {
+                    type: 'timestamp',
+                    validate: startTs => Number.isFinite(parseTs(startTs)) || `startTs is not a valid date (startTs=${startTs})`,
+                },
+                endTs: {
+                    type: 'timestamp',
+                    validate: (endTs, { startTs }) => {
+                        const end = parseTs(endTs);
+
+                        if (!Number.isFinite(end)) return `endTs is not a valid date (endTs=${endTs})`;
+
+                        // NOTE: an invalid startTs is reported by its own validate
+                        return !Number.isFinite(parseTs(startTs)) || parseTs(startTs) < end || 'startTs must be before endTs';
+                    },
+                },
+                timeZone: {
+                    type: 'string',
+                    validate: timeZone => instance.isTimeZone(timeZone) || `timeZone is not a valid IANA time zone (timeZone=${timeZone})`,
+                },
             },
             transaction: 'NEW'
         }
     }
 }
 
+/**
+ * A timestamp or date string as epoch milliseconds (NaN when it is not a date)
+ */
+function parseTs(value) {
+    return _.isNumber(value) ? value : new Date(value).getTime();
+}
+
 function toTs(value, name) {
-    const ts = _.isNumber(value) ? value : new Date(value).getTime();
+    const ts = parseTs(value);
 
     assert(Number.isFinite(ts), `${name} is not a valid date (${name}=${value})`);
 
@@ -47,6 +71,8 @@ exports.action = async function({ params={}, context={}, deps }) {
     const { id, timePeriodId } = params;
     const name = (params.name || '').trim();
 
+    // NOTE: a bus with gell-promote's arguments middleware runs these checks first (params' validate); the asserts
+    // still guard direct calls (and buses without it)
     assert(instance.isTimeZone(params.timeZone), `timeZone is not a valid IANA time zone (timeZone=${params.timeZone})`);
 
     const startTs = toTs(params.startTs, 'startTs');
