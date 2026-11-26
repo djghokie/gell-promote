@@ -12,6 +12,7 @@ const typesSnapshot = require('../../gell-metadata/domain/type/snapshot/types');
 const typeSnapshot = require('../../gell-metadata/domain/type/snapshot/type');
 const itemsSnapshot = require('../../gell-metadata/domain/type/snapshot/items');
 const attributesSnapshot = require('../../gell-metadata/dispatch/rule/snapshot/attributes');
+const attributeSnapshot = require('../../gell-metadata/dispatch/rule/snapshot/attribute');
 const actionsSnapshot = require('../../gell-metadata/dispatch/action/snapshot/actions');
 const snapshotsSnapshot = require('../../gell-metadata/dispatch/snapshot/snapshot/snapshots');
 const actionSnapshot = require('../../gell-metadata/dispatch/action/snapshot/action');
@@ -269,6 +270,26 @@ describe('gell-metadata', function() {
             assert.strictEqual(rule('min').definedBy, 'number');
             assert.strictEqual(rule('isInteger').definedBy, 'integer');
             assert.strictEqual(rule('positive').definedBy, 'integer');
+        })
+    })
+
+    describe('gell.domain.attribute', function() {
+        async function lookupAttribute(name) {
+            return attributeSnapshot.api({ params: { name }, deps: this.deps });
+        }
+
+        it('returns a param type and its rules by name', async function() {
+            const integer$ = await lookupAttribute.call(this, 'integer');
+
+            assert.strictEqual(integer$.name, 'integer');
+            assert.strictEqual(integer$.extends, 'number');
+            assert.deepStrictEqual(integer$.rules.find(rule$ => rule$.name === 'min'), { name: 'min', type: 'number', default: false, definedBy: 'number' });
+            assert.deepStrictEqual(integer$.rules.find(rule$ => rule$.name === 'isInteger'), { name: 'isInteger', default: true, definedBy: 'integer' });
+        })
+
+        it('reports an unknown param type as 404', async function() {
+            await assert.rejects(lookupAttribute.call(this, 'uuid'), { status: 404 });
+            await assert.rejects(lookupAttribute.call(this, 'constructor'), { status: 404 });
         })
     })
 
