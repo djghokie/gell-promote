@@ -1,56 +1,57 @@
 const assert = require('assert');
 
 const array = require('../../../gell-dispatch/rules/array');
+const type = require('../../../gell-dispatch/rules/type');
+
+/**
+ * The failure of an argument, named like the arguments middleware names it (which skips what TYPE skips)
+ */
+function check(name, val, rules) {
+    const { TYPE } = array;
+
+    if (TYPE.skip && TYPE.skip(val)) return;
+
+    try {
+        type.validate(TYPE, val, rules);
+    } catch (e) {
+        if (e.name !== 'RuleValidationError') throw e;
+
+        return { rule: e.rule, message: `${name} ${e.message}` };
+    }
+}
 
 describe('array rules', function() {
     it('passes an array', function() {
-        assert.strictEqual(array.check('tags', []), undefined);
-        assert.strictEqual(array.check('tags', ['a', 'b']), undefined);
+        assert.strictEqual(check('tags', []), undefined);
+        assert.strictEqual(check('tags', ['a', 'b']), undefined);
     })
 
     it('passes a blank (optional) argument', function() {
-        assert.strictEqual(array.check('tags', ''), undefined);
-        assert.strictEqual(array.check('tags', null), undefined);
+        assert.strictEqual(check('tags', ''), undefined);
+        assert.strictEqual(check('tags', null), undefined);
     })
 
     it('fails anything else, including a JSON string', function() {
         for (const val of ['["a"]', 'a', {}, 1, true]) {
-            assert.deepStrictEqual(array.check('tags', val), { rule: 'type', message: 'tags must be an array' }, JSON.stringify(val));
+            assert.deepStrictEqual(check('tags', val), { rule: 'isArray', message: 'tags must be an array' }, JSON.stringify(val));
         }
     })
 
     it('minItems', function() {
-        assert.deepStrictEqual(array.check('tags', [], { minItems: 1 }), { rule: 'minItems', message: 'tags cannot be empty' });
-        assert.deepStrictEqual(array.check('tags', ['a'], { minItems: 2 }), { rule: 'minItems', message: 'tags must have at least 2 items' });
-        assert.strictEqual(array.check('tags', ['a', 'b'], { minItems: 2 }), undefined);
+        assert.deepStrictEqual(check('tags', [], { minItems: 1 }), { rule: 'minItems', message: 'tags cannot be empty' });
+        assert.deepStrictEqual(check('tags', ['a'], { minItems: 2 }), { rule: 'minItems', message: 'tags must have at least 2 items' });
+        assert.strictEqual(check('tags', ['a', 'b'], { minItems: 2 }), undefined);
     })
 
     it('maxItems', function() {
-        assert.deepStrictEqual(array.check('tags', ['a', 'b', 'c'], { maxItems: 2 }), { rule: 'maxItems', message: 'tags must have at most 2 items' });
-        assert.strictEqual(array.check('tags', ['a', 'b'], { maxItems: 2 }), undefined);
+        assert.deepStrictEqual(check('tags', ['a', 'b', 'c'], { maxItems: 2 }), { rule: 'maxItems', message: 'tags must have at most 2 items' });
+        assert.strictEqual(check('tags', ['a', 'b'], { maxItems: 2 }), undefined);
     })
 
-    describe('items', function() {
-        const checkItem = (name, spec, val) => typeof val === spec ? undefined : { rule: 'type', message: `${name} must be a ${spec}` };
+    // NOTE: items is checked by the arguments middleware (test/gell-dispatch/middleware/test-arguments.js)
 
-        it('reports the first failing item, named by its index', function() {
-            assert.deepStrictEqual(array.check('tags', ['a', 1, 2], { items: 'string' }, { checkItem }), { rule: 'items', message: 'tags[1] must be a string' });
-        })
-
-        it('passes when every item passes', function() {
-            assert.strictEqual(array.check('tags', ['a', 'b'], { items: 'string' }, { checkItem }), undefined);
-        })
-
-        it('checks the other rules first', function() {
-            assert.strictEqual(array.check('tags', [1, 2, 3], { maxItems: 2, items: 'string' }, { checkItem }).rule, 'maxItems');
-        })
-
-        it('is not checked without checkItem', function() {
-            assert.strictEqual(array.check('tags', [1], { items: 'string' }), undefined);
-        })
-    })
-
-    it('lists its rules in the order they are checked', function() {
-        assert.deepStrictEqual(array.RULES.map(([rule]) => rule), ['minItems', 'maxItems']);
+    it('lists its rules in the order they are checked, the type check first', function() {
+        assert.deepStrictEqual(Object.keys(array.TYPE.rules), ['isArray', 'minItems', 'maxItems']);
+        assert.deepStrictEqual(array.TYPE.default, ['isArray']);
     })
 })

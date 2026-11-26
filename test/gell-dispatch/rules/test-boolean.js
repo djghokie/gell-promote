@@ -1,26 +1,44 @@
 const assert = require('assert');
 
 const boolean = require('../../../gell-dispatch/rules/boolean');
+const type = require('../../../gell-dispatch/rules/type');
+
+/**
+ * The failure of an argument, named like the arguments middleware names it (which skips what TYPE skips)
+ */
+function check(name, val, rules) {
+    const { TYPE } = boolean;
+
+    if (TYPE.skip && TYPE.skip(val)) return;
+
+    try {
+        type.validate(TYPE, val, rules);
+    } catch (e) {
+        if (e.name !== 'RuleValidationError') throw e;
+
+        return { rule: e.rule, message: `${name} ${e.message}` };
+    }
+}
 
 describe('boolean rules', function() {
     it('passes true and false', function() {
-        assert.strictEqual(boolean.check('pinned', true), undefined);
-        assert.strictEqual(boolean.check('pinned', false), undefined);
+        assert.strictEqual(check('pinned', true), undefined);
+        assert.strictEqual(check('pinned', false), undefined);
     })
 
     it('passes "true" and "false" (GET arguments)', function() {
-        assert.strictEqual(boolean.check('pinned', 'true'), undefined);
-        assert.strictEqual(boolean.check('pinned', 'false'), undefined);
+        assert.strictEqual(check('pinned', 'true'), undefined);
+        assert.strictEqual(check('pinned', 'false'), undefined);
     })
 
     it('passes a blank (optional) argument', function() {
-        assert.strictEqual(boolean.check('pinned', ''), undefined);
-        assert.strictEqual(boolean.check('pinned', null), undefined);
+        assert.strictEqual(check('pinned', ''), undefined);
+        assert.strictEqual(check('pinned', null), undefined);
     })
 
     it('fails anything else', function() {
         for (const val of ['yes', 'TRUE', 1, 0, {}, []]) {
-            assert.deepStrictEqual(boolean.check('pinned', val), { rule: 'type', message: 'pinned must be true or false' }, JSON.stringify(val));
+            assert.deepStrictEqual(check('pinned', val), { rule: 'isBoolean', message: 'pinned must be true or false' }, JSON.stringify(val));
         }
     })
 })

@@ -53,7 +53,7 @@ describe('arguments middleware', function() {
                 assert.strictEqual(e.name, 'ParameterValidationError');
                 assert.strictEqual(e.status, 400);
                 assert.strictEqual(e.route, 'unittest.event');
-                assert.deepStrictEqual(e.errors, [{ parameter: 'message', rule: 'type', message: 'message must be a string' }]);
+                assert.deepStrictEqual(e.errors, [{ parameter: 'message', rule: 'isString', message: 'message must be a string' }]);
                 assert.strictEqual(e.message, 'message must be a string');
             }
 
@@ -459,6 +459,13 @@ describe('arguments middleware', function() {
             await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: size must be one of 1, 2, 4/);
         })
 
+        it('a rule the type does not define is a metadata error, not a validation failure', async function() {
+            event.__invocationSpec.triggerSpec.params.pinned = { type: 'boolean', validate: { enum: [true] } };
+            event.params.pinned = true;
+
+            await assert.rejects(async () => middleware(event, resume), e => e.name === 'AssertionError' && /no rule defined \(type=boolean; rule=enum\)/.test(e.message));
+        })
+
         it('a type without its own enum is matched exactly', async function() {
             event.__invocationSpec.triggerSpec.params.id = { type: 'uuid', validate: { enum: ['a'] } };
             event.params.id = 'b';
@@ -516,6 +523,20 @@ describe('arguments middleware', function() {
             event.params.tags = [[1, 2], [3, 'x']];
 
             await assert.rejects(async () => middleware(event, resume), /tags\[1\]\[1\] must be a number/);
+        })
+
+        it('checks the array rules before its items', async function() {
+            spec('string', { maxItems: 2 });
+            event.params.tags = [1, 2, 3];
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: tags must have at most 2 items$/);
+        })
+
+        it('reports only the first failing item', async function() {
+            spec('string');
+            event.params.tags = ['a', 1, 2];
+
+            await assert.rejects(async () => middleware(event, resume), /ParameterValidationError: tags\[1\] must be a string$/);
         })
 
         it('passes valid items', async function() {

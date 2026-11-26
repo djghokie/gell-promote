@@ -2,6 +2,7 @@ const _ = require('lodash');
 
 const ErrorState = require('../../gell/error');
 const { compileParams } = require('../../gell-event/binding/compiler');
+const { RESERVED, validate } = require('../rules/type');
 
 /**
  * NOTE: declarative param validation for the published gell-dispatch bus; replaces gell-dispatch/middleware/arguments
@@ -21,19 +22,19 @@ function isMissing(val) {
 }
 
 /**
- * Rules implementation by param type: { check(name, value, rules, { checkItem }) => { rule, message } | undefined }
- *  - check runs for a provided argument: it checks the type, then the type's rules from the param's validate, and
- *    returns the first failure
- *  - a type without an entry is not checked (only the rules every type shares: required, a validate function, and
- *    enum, which a type's module may implement itself, e.g. number compares as numbers)
+ * TYPE by param type (TYPE format: gell-dispatch/rules/type)
+ *  - an argument is checked against its type's default rules (the type check), then the type's rules its param
+ *    declares in validate
+ *  - a type without an entry is not checked (only the rules every param shares: required, a validate function, and an
+ *    enum, matched exactly)
  */
-const TYPE_RULES = {
-    string: require('../rules/string'),
-    number: require('../rules/number'),
-    boolean: require('../rules/boolean'),
-    timestamp: require('../rules/timestamp'),
-    array: require('../rules/array'),
-    object: require('../rules/object'),
+const TYPES = {
+    string: require('../rules/string').TYPE,
+    number: require('../rules/number').TYPE,
+    boolean: require('../rules/boolean').TYPE,
+    timestamp: require('../rules/timestamp').TYPE,
+    array: require('../rules/array').TYPE,
+    object: require('../rules/object').TYPE,
 };
 
 /**
@@ -54,15 +55,18 @@ function checkParam(name, spec, val, values) {
     // NOTE: omitted optional parameters are not type checked
     if (val === undefined) return [];
 
-    const typeRules = TYPE_RULES[spec.type];
-    const typeFailure = typeRules && typeRules.check(name, val, rules, { checkItem });
+    const TYPE = TYPES[spec.type];
+    const typeFailure = TYPE && checkType(TYPE, val, rules);
 
-    if (typeFailure) return failure(typeFailure.rule, typeFailure.message);
+    // NOTE: a TYPE's messages do not name the param
+    if (typeFailure) return failure(typeFailure.rule, `${name} ${typeFailure.message}`);
 
-    // NOTE: enum by exact match, unless the type's rules implement it
-    const typeEnum = typeRules && typeRules.RULES.some(([rule]) => rule === 'enum');
+    const itemFailure = spec.type === 'array' && Array.isArray(val) && checkItems(name, rules.items, val);
 
-    if (!typeEnum && Array.isArray(rules.enum) && !rules.enum.includes(val)) {
+    if (itemFailure) return failure('items', itemFailure.message);
+
+    // NOTE: a type without a TYPE (e.g. 'uuid') still matches an enum exactly
+    if (!TYPE && Array.isArray(rules.enum) && !rules.enum.includes(val)) {
         return failure('enum', `${name} must be one of ${rules.enum.join(', ')}`);
     }
 
@@ -72,11 +76,39 @@ function checkParam(name, spec, val, values) {
 }
 
 /**
- * The failure ({ rule, message }) of one array item against the array's items spec (a compiled param), checked like
- * a param named name[index] (an item has no other params to pass a validate function)
+ * The failure ({ rule, message }) of an argument against its type's TYPE (gell-dispatch/rules/type validate), or
+ * undefined when it passes
+ *  - an argument the TYPE skips (e.g. a blank optional number) is not validated
+ *  - the reserved validate keys (messages, items) are not the type's rules, so validate does not get them
+ *
+ * NOTE: only a RuleValidationError is a validation failure; anything else (e.g. the AssertionError for a rule the
+ * type does not define) is a bug, so it propagates (500)
  */
-function checkItem(name, spec, val) {
-    return checkParam(name, spec, val, {})[0];
+function checkType(TYPE, val, rules) {
+    if (TYPE.skip && TYPE.skip(val)) return;
+
+    try {
+        validate(TYPE, val, _.omit(rules, RESERVED));
+    } catch (e) {
+        if (e.name !== 'RuleValidationError') throw e;
+
+        return { rule: e.rule, message: e.message };
+    }
+}
+
+/**
+ * The first failure ({ parameter, rule, message }) of an array's items against its items spec (validate.items, a
+ * compiled param), each checked like a param named name[index] (an item has no other params to pass a validate
+ * function)
+ */
+function checkItems(name, spec, items) {
+    if (spec === undefined) return;
+
+    for (let i = 0; i < items.length; i++) {
+        const failure = checkParam(`${name}[${i}]`, spec, items[i], {})[0];
+
+        if (failure) return failure;
+    }
 }
 
 /**
