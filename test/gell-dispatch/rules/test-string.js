@@ -43,7 +43,7 @@ describe('string rules', function() {
     it('pattern', function() {
         assert.deepStrictEqual(check('title', 'abc', { pattern: '^[A-Z]' }), { rule: 'pattern', message: 'title must match ^[A-Z]' });
         assert.strictEqual(check('title', 'Abc', { pattern: '^[A-Z]' }), undefined);
-        assert.strictEqual(check('title', '123', { pattern: /^\d+$/ }), undefined);
+        assert.throws(() => check('title', '123', { pattern: /^\d+$/ }), /rule argument is not a valid string/);
     })
 
     it('reports the first failing rule', function() {

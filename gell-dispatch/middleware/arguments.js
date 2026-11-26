@@ -2,7 +2,7 @@ const _ = require('lodash');
 
 const ErrorState = require('../../gell/error');
 const { compileParams } = require('../../gell-event/binding/compiler');
-const { RESERVED, validate } = require('../rules/type');
+const { RESERVED, TYPES, validate } = require('../rules/type');
 
 /**
  * NOTE: declarative param validation for the published gell-dispatch bus; replaces gell-dispatch/middleware/arguments
@@ -20,22 +20,6 @@ const STATUS = 400;
 function isMissing(val) {
     return val === undefined || val === null || val === '';
 }
-
-/**
- * TYPE by param type (TYPE format: gell-dispatch/rules/type)
- *  - an argument is checked against its type's default rules (the type check), then the type's rules its param
- *    declares in validate
- *  - a type without an entry is not checked (only the rules every param shares: required, a validate function, and an
- *    enum, matched exactly)
- */
-const TYPES = {
-    string: require('../rules/string'),
-    number: require('../rules/number'),
-    boolean: require('../rules/boolean'),
-    timestamp: require('../rules/timestamp'),
-    array: require('../rules/array'),
-    object: require('../rules/object'),
-};
 
 /**
  * Failures ({ parameter, rule, message }) of one argument against its param spec
@@ -78,6 +62,8 @@ function checkParam(name, spec, val, values) {
 /**
  * The failure ({ rule, message }) of an argument against its type's TYPE (gell-dispatch/rules/type validate), or
  * undefined when it passes
+ *  - TYPES (gell-dispatch/rules/type) maps param types to their TYPE; a type without one is not checked (only the
+ *    rules every param shares: required, a validate function, and an enum, matched exactly)
  *  - the reserved validate keys (messages, items) are not the type's rules, so validate does not get them
  *
  * NOTE: only a RuleValidationError is a validation failure; anything else (e.g. the AssertionError for a rule the

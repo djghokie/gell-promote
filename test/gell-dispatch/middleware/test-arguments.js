@@ -287,11 +287,11 @@ describe('arguments middleware', function() {
             await accepts('Abc');
         })
 
-        it('pattern (RegExp)', async function() {
+        it('pattern must be a string (a RegExp is a metadata error)', async function() {
             spec({ pattern: /^\d+$/ });
+            event.params.title = '123';
 
-            await rejects('12a', { rule: 'pattern', message: 'title must match /^\\d+$/' });
-            await accepts('123');
+            await assert.rejects(async () => middleware(event, resume), e => e.name === 'AssertionError' && /rule argument is not a valid string \(type=string; rule=pattern/.test(e.message));
         })
 
         it('reports only the first failing rule of an argument', async function() {

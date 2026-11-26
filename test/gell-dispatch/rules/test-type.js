@@ -97,6 +97,49 @@ describe('rules type validate', function() {
         })
     })
 
+    describe('rule arguments', function() {
+        const NUMBER = {
+            name: 'number',
+            rules: {
+                isNumber: { default: true, test: n => Number.isFinite(n), message: () => 'must be a number' },
+                max: { type: 'number', test: (n, max) => n <= max, message: (n, max) => `must be at most ${max} (${typeof max})` },
+                enum: { type: ['number'], test: (n, values) => values.includes(n), message: (n, values) => `must be one of ${values.join(', ')}` },
+                label: { type: 'nonsense', test: (n, label) => label === '7', message: () => 'label' },
+            },
+            default: ['isNumber'],
+            coerce: val => typeof val === 'string' ? Number(val) : val,
+        };
+
+        it('are coerced with the type the rule names', function() {
+            type.validate(10, { max: '10' }, NUMBER);
+            assert.throws(() => type.validate(11, { max: '10' }, NUMBER), failure('max', 'must be at most 10 (number)'));
+        })
+
+        it('are coerced item by item for an array type', function() {
+            type.validate(2, { enum: ['1', '2'] }, NUMBER);
+            assert.throws(() => type.validate(3, { enum: ['1', 2] }, NUMBER), failure('enum', 'must be one of 1, 2'));
+        })
+
+        it('are left as declared for a type that is not registered', function() {
+            assert.strictEqual(type.TYPES.nonsense, undefined);
+            type.validate(1, { label: '7' }, NUMBER);
+        })
+
+        it('must pass their type check (a bad one is a metadata error)', function() {
+            assert.throws(() => type.validate(1, { max: 'someday' }, NUMBER), e => e.name === 'AssertionError' && e.message === 'rule argument is not a valid number (type=number; rule=max; argument="someday")');
+            assert.throws(() => type.validate(1, { enum: [1, 'x'] }, NUMBER), /rule argument is not a valid number \(type=number; rule=enum; argument="x"\)/);
+        })
+
+        it('must be an array for an array type', function() {
+            assert.throws(() => type.validate(1, { enum: 1 }, NUMBER), /rule argument is not an array \(type=number; rule=enum; argument=1\)/);
+        })
+
+        it('registers every param type', function() {
+            assert.deepStrictEqual(Object.keys(type.TYPES), ['string', 'number', 'boolean', 'timestamp', 'array', 'object']);
+            Object.entries(type.TYPES).forEach(([name, TYPE]) => assert.strictEqual(TYPE.name, name));
+        })
+    })
+
     it('isBlank', function() {
         assert.strictEqual(type.isBlank(''), true);
         assert.strictEqual(type.isBlank(null), true);

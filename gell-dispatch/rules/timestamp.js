@@ -11,7 +11,7 @@ const number = require('./number');
  */
 
 /**
- * A timestamp argument (or rule bound) as epoch milliseconds (NaN when it is not a date)
+ * A timestamp argument (or a min/max rule argument, see rules type) as epoch milliseconds (NaN when it is not a date)
  *  - numbers and numeric strings are epoch milliseconds; other strings are parsed as dates
  */
 function coerce(val) {
@@ -21,10 +21,6 @@ function coerce(val) {
     if (typeof val === 'string') return new Date(val).getTime();
 
     return NaN;
-}
-
-function formatTs(bound) {
-    return new Date(coerce(bound)).toISOString();
 }
 
 module.exports = {
@@ -38,13 +34,13 @@ module.exports = {
         },
         min: {
             type: 'timestamp',
-            test: (ts, min) => ts >= coerce(min),
-            message: (ts, min) => `must be on or after ${formatTs(min)}`,
+            test: (ts, min) => ts >= min,
+            message: (ts, min) => `must be on or after ${new Date(min).toISOString()}`,
         },
         max: {
             type: 'timestamp',
-            test: (ts, max) => ts <= coerce(max),
-            message: (ts, max) => `must be on or before ${formatTs(max)}`,
+            test: (ts, max) => ts <= max,
+            message: (ts, max) => `must be on or before ${new Date(max).toISOString()}`,
         },
     },
     default: ['isTimestamp'],

@@ -39,8 +39,8 @@ module.exports = {
             message: (n, max) => `must be at most ${max}`,
         },
         enum: {
-            type: 'array',
-            test: (n, values) => values.map(coerce).includes(n),
+            type: ['number'],
+            test: (n, values) => values.includes(n),
             message: (n, values) => `must be one of ${values.join(', ')}`,
         },
     },

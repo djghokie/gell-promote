@@ -16,7 +16,11 @@ const assert = require('assert');
  *      }
  *  - rules: each rule's test(val, arg) answers whether the argument passes; message(val, arg) says why it does not,
  *    without the param's name (the caller prefixes it, e.g. 'title must be at least 3 characters')
- *      - type: the type of the rule's argument, as a param declares it in validate (e.g. minLength: 3)
+ *      - test and message get the coerced argument and the coerced rule argument: they never call coerce
+ *      - type: the type of the rule's argument, as a param declares it in validate (e.g. minLength: 3), by name
+ *        (TYPES) or as [name] for an array of that type (e.g. enum: [1, 2]); validate coerces the rule argument with
+ *        that type's coerce, and asserts it passes that type's default rules (a bad rule argument, e.g.
+ *        min: 'someday', is a mistake in the param's metadata)
  *  - default: rules that always run, first and in this order (the type check); their test takes only the argument
  *  - allowBlank (optional): a blank argument ('' or null, e.g. an empty form field of an optional param) passes
  *    without its rules; a blank required argument is reported as required before validate runs
@@ -32,6 +36,21 @@ const assert = require('assert');
  *  - items: an array param's item spec
  */
 const RESERVED = ['messages', 'items'];
+
+/**
+ * TYPE by param type name (gell-dispatch/middleware/arguments validates params of these types); a rule's type names
+ * one of these
+ *
+ * NOTE: the type modules are TYPE data: they do not require this module
+ */
+const TYPES = {
+    string: require('./string'),
+    number: require('./number'),
+    boolean: require('./boolean'),
+    timestamp: require('./timestamp'),
+    array: require('./array'),
+    object: require('./object'),
+};
 
 /**
  * Validates an argument: a blank one passes when the TYPE allows blanks; otherwise the argument is coerced, then
@@ -62,10 +81,35 @@ function validate(arg, spec={}, TYPE) {
         assert(ruleDef, `no rule defined (type=${TYPE.name}; rule=${ruleName})`);
 
         const { test, message } = ruleDef;
-        const ruleArg = spec[ruleName];
+        const ruleArg = coerceRuleArg(spec[ruleName], ruleDef.type, `type=${TYPE.name}; rule=${ruleName}`);
 
         if (!test(val, ruleArg)) throw failure(ruleName, message(val, ruleArg));
     }
+}
+
+/**
+ * A rule's argument coerced to the rule's type (see TYPE format: rules type)
+ *  - a type not in TYPES (or no type) leaves the argument as declared
+ *  - asserts the coerced argument passes the type's default rules (and that an array type's argument is an array)
+ */
+function coerceRuleArg(ruleArg, ruleType, context) {
+    if (Array.isArray(ruleType)) {
+        assert(Array.isArray(ruleArg), `rule argument is not an array (${context}; argument=${JSON.stringify(ruleArg)})`);
+
+        return ruleArg.map(item => coerceRuleArg(item, ruleType[0], context));
+    }
+
+    const ARG_TYPE = TYPES[ruleType];
+
+    if (!ARG_TYPE) return ruleArg;
+
+    const coerced = ARG_TYPE.coerce ? ARG_TYPE.coerce(ruleArg) : ruleArg;
+
+    ARG_TYPE.default.forEach(name => {
+        assert(ARG_TYPE.rules[name].test(coerced), `rule argument is not a valid ${ARG_TYPE.name} (${context}; argument=${JSON.stringify(ruleArg)})`);
+    });
+
+    return coerced;
 }
 
 function failure(rule, message) {
@@ -81,6 +125,7 @@ function isBlank(val) {
 
 module.exports = {
     RESERVED,
+    TYPES,
     validate,
     isBlank,
 };
