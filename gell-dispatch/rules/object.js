@@ -38,7 +38,6 @@ module.exports = {
     allowBlank: true,
     rules: {
         isObject: {
-            default: true,
             test: obj => obj !== undefined,
             message: () => 'must be an object',
         },

@@ -15,7 +15,6 @@ module.exports = {
     allowBlank: true,
     rules: {
         isArray: {
-            default: true,
             test: val => Array.isArray(val),
             message: () => 'must be an array',
         },

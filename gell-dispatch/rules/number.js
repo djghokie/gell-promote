@@ -24,7 +24,6 @@ module.exports = {
     allowBlank: true,
     rules: {
         isNumber: {
-            default: true,
             test: n => Number.isFinite(n),
             message: () => 'must be a number',
         },

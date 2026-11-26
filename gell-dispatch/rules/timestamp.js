@@ -28,7 +28,6 @@ module.exports = {
     allowBlank: true,
     rules: {
         isTimestamp: {
-            default: true,
             test: ts => Number.isFinite(ts),
             message: () => 'is not a valid date',
         },

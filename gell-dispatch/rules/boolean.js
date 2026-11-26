@@ -23,7 +23,6 @@ module.exports = {
     allowBlank: true,
     rules: {
         isBoolean: {
-            default: true,
             test: val => typeof val === 'boolean',
             message: () => 'must be true or false',
         },

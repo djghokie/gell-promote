@@ -15,7 +15,6 @@ module.exports = {
     name: 'string',
     rules: {
         isString: {
-            default: true,
             test: val => _.isString(val),
             message: () => 'must be a string',
         },

@@ -5,8 +5,8 @@ const type = require('../../../gell-dispatch/rules/type');
 const TYPE = {
     name: 'word',
     rules: {
-        isString: { default: true, test: val => typeof val === 'string', message: () => 'must be a string' },
-        isWord: { default: true, test: val => /^\w*$/.test(val), message: val => `must be one word (value=${val})` },
+        isString: { test: val => typeof val === 'string', message: () => 'must be a string' },
+        isWord: { test: val => /^\w*$/.test(val), message: val => `must be one word (value=${val})` },
         minLength: { type: 'number', test: (val, min) => val.length >= min, message: (val, min) => `must be at least ${min} characters` },
         maxLength: { type: 'number', test: (val, max) => val.length <= max, message: (val, max) => `must be at most ${max} characters` },
     },
@@ -59,7 +59,7 @@ describe('rules type validate', function() {
             name: 'number',
             allowBlank: true,
             rules: {
-                isNumber: { default: true, test: n => Number.isFinite(n), message: () => 'must be a number' },
+                isNumber: { test: n => Number.isFinite(n), message: () => 'must be a number' },
                 min: { type: 'number', test: (n, min) => n >= min, message: (n, min) => `must be at least ${min}` },
             },
             default: ['isNumber'],
@@ -80,7 +80,7 @@ describe('rules type validate', function() {
         const NUMBER = {
             name: 'number',
             rules: {
-                isNumber: { default: true, test: n => Number.isFinite(n), message: n => `must be a number (value=${n})` },
+                isNumber: { test: n => Number.isFinite(n), message: n => `must be a number (value=${n})` },
                 max: { type: 'number', test: (n, max) => n <= max, message: (n, max) => `${n} must be at most ${max}` },
             },
             default: ['isNumber'],
@@ -101,7 +101,7 @@ describe('rules type validate', function() {
         const NUMBER = {
             name: 'number',
             rules: {
-                isNumber: { default: true, test: n => Number.isFinite(n), message: () => 'must be a number' },
+                isNumber: { test: n => Number.isFinite(n), message: () => 'must be a number' },
                 max: { type: 'number', test: (n, max) => n <= max, message: (n, max) => `must be at most ${max} (${typeof max})` },
                 enum: { type: ['number'], test: (n, values) => values.includes(n), message: (n, values) => `must be one of ${values.join(', ')}` },
                 label: { type: 'nonsense', test: (n, label) => label === '7', message: () => 'label' },

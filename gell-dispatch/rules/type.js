@@ -8,7 +8,7 @@ const assert = require('assert');
  *          name: 'number',
  *          allowBlank: true,
  *          rules: {
- *              isNumber: { default: true, test: n => ..., message: () => 'must be a number' },
+ *              isNumber: { test: n => ..., message: () => 'must be a number' },
  *              min: { type: 'number', test: (n, min) => ..., message: (n, min) => `must be at least ${min}` },
  *          },
  *          default: ['isNumber'],
