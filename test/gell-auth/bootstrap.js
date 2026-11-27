@@ -3,8 +3,7 @@ const activeQueries = require('gell-session/dynamodb/active/queries');
 const activityQueries = require('gell-session/dynamodb/activity/queries');
 const webQueries = require('../../gell-web/dynamodb/queries');
 
-const MockStore = require('gell-aws-dynamodb/mock/store');
-const queryWrapper = require('../../gell-aws-dynamodb/query-wrapper');
+const MockStore = require('../../gell-aws-dynamodb/mock/store');
 
 const user = require('gell-web/domain/user');
 
@@ -26,11 +25,11 @@ function setupTypes(deps) {
 
 function setupStore(deps) {
     const store = new MockStore();
-    Object.assign(store.namedQueries,
-        queryWrapper.ut(sessionQueries),
-        queryWrapper.ut(activeQueries),
-        queryWrapper.ut(activityQueries),
-        queryWrapper.ut(webQueries),
+    store.configureQueries(
+        sessionQueries,
+        activeQueries,
+        activityQueries,
+        webQueries,
     );
     
     deps.define('store', store);

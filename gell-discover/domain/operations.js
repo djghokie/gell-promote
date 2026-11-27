@@ -5,12 +5,12 @@ const { State } = require('gell');
 /**
  * Registry of gell-aws-dynamodb named operation definitions ({ name, description, parameters, modify, operation })
  *
- * NOTE: store.namedOperations only holds the wrapped operation functions; this keeps the full definitions so
+ * NOTE: the store (gell-promote/gell-aws-dynamodb) holds these definitions as registered (configureOperations); this keeps them so
  * the store's operations and their metadata come from the same source
  *
  * WIP:
  *  - share a base class with Queries? register/registerModule/names/definitions/describe are identical
- *  - compile parameters with gell-domain (see operation-wrapper validateArguments)?
+ *  - compile parameters with gell-domain (see gell-aws-dynamodb/named, which checks them like params)?
  */
 class Operations extends State {
 
@@ -37,7 +37,7 @@ class Operations extends State {
     }
 
     /**
-     * full definitions keyed by name; wrap with operationWrapper.dynamodb/ut before assigning to store.namedOperations
+     * full definitions keyed by name; add to a store with store.configureOperations
      */
     definitions() {
         const defs = {};

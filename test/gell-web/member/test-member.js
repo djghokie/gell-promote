@@ -3,8 +3,7 @@ const _ = require('lodash');
 
 const runtime = require('../../../gell-runtime/mocha');
 
-const operationWrapper = require('../../../gell-aws-dynamodb/operation-wrapper');
-const sessionOperations = operationWrapper.ut(require('gell-session/dynamodb/operations'));
+const sessionOperations = require('gell-session/dynamodb/operations');
 
 const bootstrap = require('../bootstrap');
 
@@ -33,7 +32,7 @@ describe('MEMBER', function() {
     beforeEach(async function() {
         store = this.deps.resolveSingle('store');
         // NOTE: session.update (web.member.update) is a named operation; same as test/gell-session/util/test-event.js
-        store.writeOptions.namedOperations = sessionOperations;
+        store.configureOperations(sessionOperations);
 
         types = this.deps.resolveSingle('types');
         types.set('namespace', APPLICATION_ID, 'APPLICATION');

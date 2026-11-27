@@ -5,9 +5,8 @@ const runtime = require('../../../gell-runtime/mocha');
 const session = require('gell-session/domain/session');
 const javascript = require('gell-domain/binding/javascript');
 
-const MockStore = require('gell-aws-dynamodb/mock/store');
-const operationWrapper = require('../../../gell-aws-dynamodb/operation-wrapper');
-const sessionOperations = operationWrapper.ut(require('gell-session/dynamodb/operations'));
+const MockStore = require('../../../gell-aws-dynamodb/mock/store');
+const sessionOperations = require('gell-session/dynamodb/operations');
 
 const { createInitiate, createUpdate } = require('../../../gell-session/util/event');
 const { Types } = require('../../../gell-discover/domain/types');
@@ -57,7 +56,7 @@ describe('event generation utility', function() {
 
     beforeEach(function() {
         store = new MockStore();
-	    store.writeOptions.namedOperations = sessionOperations;  // NOTE: named operation not working for some reaons
+	    store.configureOperations(sessionOperations);  // NOTE: named operation not working for some reaons
 
         this.deps.define('store', store);
     })

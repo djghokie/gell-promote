@@ -4,8 +4,7 @@ const sessionQueries = require('../../../gell-session/dynamodb/queries');
 const activeQueries = require('gell-session/dynamodb/active/queries');
 const activityQueries = require('gell-session/dynamodb/activity/queries');
 
-const MockStore = require('gell-aws-dynamodb/mock/store');
-const queryWrapper = require('../../../gell-aws-dynamodb/query-wrapper');
+const MockStore = require('../../../gell-aws-dynamodb/mock/store');
 
 const runtime = require('../../../gell-runtime/mocha');
 const stereotypeFixtures = require('../../../gell-stereotype/ut/mocha');
@@ -25,10 +24,10 @@ describe('APPLICATION extension of the namespace stereotype', function() {
 
     beforeEach(function() {
         const store = new MockStore();
-        Object.assign(store.namedQueries,
-            queryWrapper.ut(sessionQueries),
-            queryWrapper.ut(activeQueries),
-            queryWrapper.ut(activityQueries),
+        store.configureQueries(
+            sessionQueries,
+            activeQueries,
+            activityQueries,
         );
 
         this.deps.define('store', store);

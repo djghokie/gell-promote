@@ -5,12 +5,12 @@ const { State } = require('gell');
 /**
  * Registry of gell-aws-dynamodb named query definitions ({ name, description, parameters, filter, query })
  *
- * NOTE: store.namedQueries only holds the wrapped query functions; this keeps the full definitions so
+ * NOTE: the store (gell-promote/gell-aws-dynamodb) holds these definitions as registered (configureQueries); this keeps them so
  * the store's queries and their metadata come from the same source
  *
  * WIP:
  *  - should this be a Directory implementation (see Types.names)?
- *  - compile parameters with gell-domain (see query-wrapper validateArguments)?
+ *  - compile parameters with gell-domain (see gell-aws-dynamodb/named, which checks them like params)?
  */
 class Queries extends State {
 
@@ -37,7 +37,7 @@ class Queries extends State {
     }
 
     /**
-     * full definitions keyed by name; wrap with queryWrapper.dynamodb/ut before assigning to store.namedQueries
+     * full definitions keyed by name; add to a store with store.configureQueries
      */
     definitions() {
         const defs = {};

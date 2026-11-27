@@ -1,8 +1,7 @@
 const sessionQueries = require('../../../gell-session/dynamodb/queries');
 const activityQueries = require('gell-session/dynamodb/activity/queries');
 
-const MockStore = require('gell-aws-dynamodb/mock/store');
-const queryWrapper = require('../../../gell-aws-dynamodb/query-wrapper');
+const MockStore = require('../../../gell-aws-dynamodb/mock/store');
 
 const { Types } = require('../../../gell-discover/domain/types');
 
@@ -25,9 +24,9 @@ function setupTypes(deps) {
 
 function setupStore(deps) {
     const store = new MockStore();
-    Object.assign(store.namedQueries,
-        queryWrapper.ut(sessionQueries),
-        queryWrapper.ut(activityQueries),
+    store.configureQueries(
+        sessionQueries,
+        activityQueries,
     );
 
     deps.define('store', store);

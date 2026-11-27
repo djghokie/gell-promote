@@ -4,7 +4,6 @@ const runtime = require('gell-runtime/mocha');
 
 const sessionQueries = require('../../../gell-session/dynamodb/queries');
 const activityQueries = require('gell-session/dynamodb/activity/queries');
-const queryWrapper = require('../../../gell-aws-dynamodb/query-wrapper');
 
 const MockStore = require('../../../gell-aws-dynamodb/mock/store');
 const { Types } = require('../../../gell-discover/domain/types');
@@ -38,7 +37,7 @@ describe('gell-namespace TENANT administration', function() {
         queries.registerModule(activityQueries);
 
         const store = new MockStore('type', 'id');
-        Object.assign(store.namedQueries, queryWrapper.ut(queries.definitions()));
+        store.configureQueries(queries.definitions());
 
         this.deps.define('types', types);
         this.deps.define('store', store);

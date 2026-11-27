@@ -6,7 +6,7 @@ const queries = require('gell-session/dynamodb/queries');
  *
  * WIP: gell-session declares parentId 'uuid', but a parent is not always a uuid: TENANT and APPLICATION ids are
  * namespace strings (e.g. INCUBATOR:BLUEHOUR), and gell-web users/members and gell-namespace TENANT items query their
- * children; now that the query wrappers (gell-promote/gell-aws-dynamodb) check parameter types, fix the declaration
+ * children; now that gell-promote's store (gell-aws-dynamodb/named) checks parameter types, fix the declaration
  * in gell-session and register its queries directly again
  */
 const PARENT_ID = ['session.children', 'session.children.active'];
