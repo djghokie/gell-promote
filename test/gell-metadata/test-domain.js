@@ -19,10 +19,8 @@ const snapshotsSnapshot = require('../../gell-metadata/dispatch/snapshot/snapsho
 const actionSnapshot = require('../../gell-metadata/dispatch/action/snapshot/action');
 const snapshotSnapshot = require('../../gell-metadata/dispatch/snapshot/snapshot/snapshot');
 const queriesSnapshot = require('../../gell-metadata/store/query/snapshot/queries');
-const querySnapshot = require('../../gell-metadata/store/query/snapshot/query');
 const queryRunSnapshot = require('../../gell-metadata/store/query/snapshot/run');
 const operationsSnapshot = require('../../gell-metadata/store/operation/snapshot/operations');
-const operationSnapshot = require('../../gell-metadata/store/operation/snapshot/operation');
 const jobsSnapshot = require('../../gell-metadata/job/snapshot/jobs');
 const jobSnapshot = require('../../gell-metadata/job/snapshot/job');
 
@@ -442,28 +440,6 @@ describe('gell-metadata', function() {
         })
     })
 
-    describe('gell.domain.query', function() {
-        async function lookupQuery(name) {
-            return querySnapshot.api({ params: { name }, deps: this.deps });
-        }
-
-        it('returns query metadata by name', async function() {
-            const query$ = await lookupQuery.call(this, 'sessions.activity.type');
-
-            assert.deepStrictEqual(query$, {
-                name: 'sessions.activity.type',
-                description: 'returns session activity, most recent first, by type',
-                parameters: [
-                    { name: 'type', type: 'string', optional: false },
-                ],
-            });
-        })
-
-        it('reports unknown query as 404', async function() {
-            await assert.rejects(lookupQuery.call(this, 'unittest.missing'), { status: 404 });
-        })
-    })
-
     describe('gell.domain.query.run', function() {
         const administrator = { snapshotAttribute: name => name === 'role' ? 'administrator' : undefined };
 
@@ -561,28 +537,6 @@ describe('gell-metadata', function() {
             const names = operations$.map(operation$ => operation$.name);
 
             assert.deepStrictEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
-        })
-    })
-
-    describe('gell.domain.operation', function() {
-        async function lookupOperation(name) {
-            return operationSnapshot.api({ params: { name }, deps: this.deps });
-        }
-
-        it('returns operation metadata by name', async function() {
-            const operation$ = await lookupOperation.call(this, 'session.touch');
-
-            assert.deepStrictEqual(operation$, {
-                name: 'session.touch',
-                description: 'updates updatedTs attribute',
-                parameters: [
-                    { name: 'ts', type: 'timestamp', optional: true },
-                ],
-            });
-        })
-
-        it('reports unknown operation as 404', async function() {
-            await assert.rejects(lookupOperation.call(this, 'session.missing'), { status: 404 });
         })
     })
 

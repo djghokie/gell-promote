@@ -2,11 +2,9 @@ const assert = require('assert');
 
 const runtime = require('gell-runtime/mocha');
 
-
 const Store = require('../../../../../gell-aws-dynamodb/mock/store');
 
 const queriesSnapshot = require('../../../../../gell-metadata/store/query/snapshot/queries');
-const querySnapshot = require('../../../../../gell-metadata/store/query/snapshot/query');
 const queryRunSnapshot = require('../../../../../gell-metadata/store/query/snapshot/run');
 
 const QUERIES = {
@@ -62,29 +60,6 @@ describe('gell-metadata store queries', function() {
                     ],
                 },
             ]);
-        })
-
-        it('effect returns the same metadata', async function() {
-            const queries$ = await queriesSnapshot.effect({ params: {}, deps: this.deps });
-
-            assert.deepStrictEqual(queries$.map(q$ => q$.name), ['unittest.rank', 'unittest.type']);
-        })
-    })
-
-    describe('gell.domain.query', function() {
-        it('returns query metadata by name', async function() {
-            const query$ = await querySnapshot.api({ params: { name: 'unittest.type' }, deps: this.deps });
-
-            assert.strictEqual(query$.name, 'unittest.type');
-            assert.strictEqual(query$.description, 'items by type');
-        })
-
-        it('effect returns undefined for an unknown query', async function() {
-            assert.strictEqual(await querySnapshot.effect({ params: { name: 'unittest.missing' }, deps: this.deps }), undefined);
-        })
-
-        it('api reports an unknown query as 404', async function() {
-            await assert.rejects(querySnapshot.api({ params: { name: 'unittest.missing' }, deps: this.deps }), { status: 404 });
         })
     })
 

@@ -1,4 +1,4 @@
-const { describeAll } = require('../../describe');
+const all = require('../../../snapshot/all');
 
 exports.__metadata = {
     name: 'gell.domain.queries',
@@ -13,27 +13,15 @@ exports.__metadata = {
     }
 }
 
-/**
- * NOTE: reads the store's query registry (store.queries, a gell-discover Queries)
- */
-function listQueries(deps) {
-    const { store } = deps.resolve('store');
-
-    return describeAll(store.queries);
-}
-
-exports.effect = async function({ params={}, deps }) {
-    const { logger } = deps.resolve('logger');
-
-    logger.info('executing effect (name="gell.domain.queries")');
-
-    return listQueries(deps);
-}
-
 exports.api = async function({ params={}, deps }) {
-    const { logger } = deps.resolve('logger');
+    const { logger, store } = deps.resolve('logger', 'store');
 
     logger.info('executing api (name="gell.domain.queries")');
 
-    return listQueries(deps);
+    return all.effect({
+        context: {
+            registry_: store.queries
+        },
+        deps
+    });
 }
