@@ -7,14 +7,10 @@ const { TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
 
 const named = require('../named');
 
-const DEFAULT_OPTIONS = {
-	namedOperations: {}
-}
-
 /**
  * NOTE: gell-promote copy of gell-aws-dynamodb item/write: namedOperation runs a named operation definition with
- * named.operation (validates and coerces its request), so the store holds the definitions as registered (no
- * operation-wrapper); an object definition declares its command as operation
+ * named.operation (validates and coerces its request), looking definitions up in the store's registry
+ * (options.operations: store.operations, a gell-discover Operations); a definition declares its command as operation
  */
 /**
  * Implements a "transaction write" future.  Each call to next represents an operation in the
@@ -29,17 +25,18 @@ const DEFAULT_OPTIONS = {
  * 
  * @param {*} tableName 
  * @param {*} deps 
- * @param {*} options 
+ * @param {*} options { operations }: the store's operation registry (gell-discover Operations)
  * @returns 
  */
 module.exports = function* write(tableName, deps, options={}) {
 	assert(_.isString(tableName), 'tableName is required');
 	assert(deps, 'deps is required');
+	const { operations: operations_ } = options;
+	assert(operations_, 'options.operations is required');
 
 	const state = new State();
 
 	// TODO: store following with State
-	const mergedOptions = _.defaults(options, DEFAULT_OPTIONS);
 	const requests = [];
 	let error = false;
 
@@ -118,8 +115,8 @@ module.exports = function* write(tableName, deps, options={}) {
 	 * Add a named operation to transaction
 	 * 
 	 * WIP: what does this currently support?
-	 * 	- static def
-	 * 	- function def
+	 * 	- static def (operation is the command)
+	 * 	- operation is a function of the request
 	 * 	- predefined table name
 	 * 
 	 * WIP: future support
@@ -129,7 +126,7 @@ module.exports = function* write(tableName, deps, options={}) {
 	 * @returns 
 	 */
 	function namedOperation(request) {
-		const def = mergedOptions.namedOperations[request.name];
+		const def = operations_.get(request.name);
 
 		// NOTE: copied, as explicit fills in the command (a static operation is shared by every request)
 		const command = Object.assign({}, named.operation(request.name, def, request));
@@ -151,7 +148,7 @@ module.exports = function* write(tableName, deps, options={}) {
 		if (name) {
 			assert(_.isString(name, '"name" must be string referencing named operation'));
 
-			assert(mergedOptions.namedOperations[name], `no named operation (name=${request.name})`);
+			assert(operations_.get(name), `no named operation (name=${request.name})`);
 		} else {
 			assert(_.isString(operation));
 

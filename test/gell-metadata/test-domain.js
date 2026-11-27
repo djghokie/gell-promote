@@ -415,7 +415,7 @@ describe('gell-metadata', function() {
             assert(names.includes('sessions.activity.type'), 'missing sessions.activity.type');
             assert(names.includes('session.children'), 'missing session.children');
 
-            names.forEach(name => assert(this.store.namedQueries[name], `query (name=${name}) not registered with the store`));
+            names.forEach(name => assert(this.store.queries.get(name), `query (name=${name}) not registered with the store`));
         })
 
         it('includes query metadata', async function() {
@@ -537,7 +537,7 @@ describe('gell-metadata', function() {
             assert(names.includes('session.touch'), 'missing session.touch');
             assert(names.includes('session.end'), 'missing session.end');
 
-            names.forEach(name => assert(this.store.writeOptions.namedOperations[name], `operation (name=${name}) not registered with the store`));
+            names.forEach(name => assert(this.store.operations.get(name), `operation (name=${name}) not registered with the store`));
         })
 
         it('includes operation metadata', async function() {

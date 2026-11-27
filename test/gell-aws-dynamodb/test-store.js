@@ -51,13 +51,15 @@ describe('gell-aws-dynamodb stores', function() {
             };
 
             store = new Store({ name: 'unittest', partitionKey: 'type', sortKey: 'id', indexes: {} }, deps);
-            store.configureQueries({ [QUERY.name]: QUERY });
-            store.configureOperations({ [OPERATION.name]: OPERATION });
+            store.queries.register(QUERY);
+            store.operations.register(OPERATION);
         })
 
-        it('holds the definitions as registered', function() {
-            assert.strictEqual(store.namedQueries[QUERY.name], QUERY);
-            assert.strictEqual(store.namedOperations[OPERATION.name], OPERATION);
+        it('keeps the definitions in its registries, not in maps', function() {
+            assert.strictEqual(store.queries.get(QUERY.name), QUERY);
+            assert.strictEqual(store.operations.get(OPERATION.name), OPERATION);
+            assert.strictEqual(store.namedQueries, undefined);
+            assert.strictEqual(store.namedOperations, undefined);
         })
 
         it('runs a named query with coerced args', async function() {
@@ -100,8 +102,15 @@ describe('gell-aws-dynamodb stores', function() {
         it('fails an assert for a definition with a parameter type that is not defined', function() {
             const bad = { name: 'unittest.bad', parameters: { to: 'email' }, query: {} };
 
-            assert.throws(() => store.configureQueries({ [bad.name]: bad }), /query parameter type is not defined \(query=unittest.bad; parameter=to; type=email\)/);
-            assert.throws(() => store.configureOperations({ [bad.name]: bad }), /operation parameter type is not defined/);
+            assert.throws(() => store.queries.register(bad), /query parameter type is not defined \(query=unittest.bad; parameter=to; type=email\)/);
+            assert.throws(() => store.operations.register(bad), /operation parameter type is not defined/);
+        })
+
+        it('fails an assert for a named query or operation that is not registered', async function() {
+            assert.throws(() => store.page('unittest.none'), /no named query \(name=unittest.none\) defined/);
+
+            const $txn = store.write();
+            assert.throws(() => $txn.next({ name: 'unittest.none', key: { type: 'X', id: '1' } }), /no named operation \(name=unittest.none\)/);
         })
     })
 
@@ -110,17 +119,19 @@ describe('gell-aws-dynamodb stores', function() {
 
         beforeEach(async function() {
             store = new MockStore('type', 'id');
-            store.configureQueries({ [QUERY.name]: QUERY });
-            store.configureOperations({ [OPERATION.name]: OPERATION });
+            store.queries.register(QUERY);
+            store.operations.register(OPERATION);
 
             await store.save({ type: 'GELLO', id: '1' });
             await store.save({ type: 'GELLO', id: '2' });
             await store.save({ type: 'FOOBAR', id: '3' });
         })
 
-        it('holds the definitions as registered', function() {
-            assert.strictEqual(store.namedQueries[QUERY.name], QUERY);
-            assert.strictEqual(store.writeOptions.namedOperations[OPERATION.name], OPERATION);
+        it('keeps the definitions in its registries, not in maps', function() {
+            assert.strictEqual(store.queries.get(QUERY.name), QUERY);
+            assert.strictEqual(store.operations.get(OPERATION.name), OPERATION);
+            assert.strictEqual(store.namedQueries, undefined);
+            assert.strictEqual(store.writeOptions, undefined);
         })
 
         it('runs a named query filter with coerced args', async function() {
@@ -149,10 +160,5 @@ describe('gell-aws-dynamodb stores', function() {
             assert.strictEqual(store.select({ id: '1' })[0].ts, undefined);
         })
 
-        it('runs a definition that is a function as it is', async function() {
-            store.configureQueries({ 'unittest.all': items => items });
-
-            assert.strictEqual((await store.drain('unittest.all')).length, 3);
-        })
     })
 })

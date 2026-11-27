@@ -56,7 +56,7 @@ describe('event generation utility', function() {
 
     beforeEach(function() {
         store = new MockStore();
-	    store.configureOperations(sessionOperations);  // NOTE: named operation not working for some reaons
+	    store.operations.registerModule(sessionOperations);  // NOTE: named operation not working for some reaons
 
         this.deps.define('store', store);
     })

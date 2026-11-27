@@ -2,11 +2,15 @@ const assert = require('assert');
 
 const { State } = require('gell');
 
+const { compileParams } = require('../../gell-event/binding/compiler');
+const { TYPES } = require('../../gell-dispatch/rules/type');
+
 /**
  * Registry of gell-aws-dynamodb named query definitions ({ name, description, parameters, filter, query })
  *
- * NOTE: the store (gell-promote/gell-aws-dynamodb) holds these definitions as registered (configureQueries); this keeps them so
- * the store's queries and their metadata come from the same source
+ * NOTE: the store (gell-promote/gell-aws-dynamodb store, mock/store) creates one (store.queries) and looks its
+ * query definitions up in it, so the store's queries and their metadata come from the same source; register asserts
+ * every parameter type is defined (gell-dispatch/rules/type TYPES)
  *
  * WIP:
  *  - should this be a Directory implementation (see Types.names)?
@@ -22,6 +26,10 @@ class Queries extends State {
         assert(name, `query must define "name" attribute to be registered`);
         assert(!this.get(name), `query (name=${name}) is already registered`);
 
+        Object.values(compileParams(def.parameters)).forEach(({ name: parameter, type }) => {
+            assert(TYPES[type], `query parameter type is not defined (query=${name}; parameter=${parameter}; type=${type})`);
+        });
+
         this.set(name, def);
     }
 
@@ -34,17 +42,6 @@ class Queries extends State {
 
     names() {
         return this._internal.keys();
-    }
-
-    /**
-     * full definitions keyed by name; add to a store with store.configureQueries
-     */
-    definitions() {
-        const defs = {};
-
-        for (const name of this.names()) defs[name] = this.get(name);
-
-        return defs;
     }
 
     /**

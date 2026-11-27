@@ -4,7 +4,6 @@ const runtime = require('gell-runtime/mocha');
 
 
 const Store = require('../../../../../gell-aws-dynamodb/mock/store');
-const { Queries } = require('../../../../../gell-discover/domain/queries');
 
 const queriesSnapshot = require('../../../../../gell-metadata/store/query/snapshot/queries');
 const querySnapshot = require('../../../../../gell-metadata/store/query/snapshot/query');
@@ -34,15 +33,12 @@ describe('gell-metadata store queries', function() {
     before(runtime.beforeAll);
 
     beforeEach(async function() {
-        const queries_ = new Queries();
-        queries_.registerModule(QUERIES);
-
         const store = new Store('type', 'id');
-        store.configureQueries(queries_.definitions());
+        store.queries.registerModule(QUERIES);
 
         for (const rank of [1, 2, 3]) await store.save({ type: 'UNITTEST#ITEM', id: `item-${rank}`, rank });
 
-        this.deps.define('queries', queries_);
+        this.deps.define('queries', store.queries);
         this.deps.define('store', store);
     })
 

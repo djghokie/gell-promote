@@ -84,11 +84,6 @@ describe('gell-aws-dynamodb/named', function() {
             assert.deepStrictEqual(named.filter('open', { name: 'open', filter: (items, args) => args }, [], { a: 1 }), { a: 1 });
         })
 
-        it('calls a definition that is a function as it is', function() {
-            assert.deepStrictEqual(named.query('fn', args => ({ table: 'session', hash: args.type }), { type: 'X' }), { table: 'session', hash: 'X' });
-            assert.deepStrictEqual(named.filter('fn', (items, args) => items.filter(item$ => item$.type === args.type), items, { type: 'GELLO' }), [{ type: 'GELLO' }]);
-        })
-
         it('fails an assert for a definition without the implementation', function() {
             assert.throws(() => named.query('filterOnly', { name: 'filterOnly', filter: items => items }, {}), /named query \(name=filterOnly\) does not define a DynamoDB implementation/);
             assert.throws(() => named.filter('queryOnly', { name: 'queryOnly', query: {} }, [], {}), /named query \(name=queryOnly\) does not define a filter/);
@@ -141,36 +136,10 @@ describe('gell-aws-dynamodb/named', function() {
             assert.throws(() => named.modify('unittest.touch', def, {}, { session_, val: null }), invalid([{ property: 'val', rule: 'required' }]));
         })
 
-        it('calls a definition that is a function as it is', function() {
-            assert.deepStrictEqual(named.operation('fn', request => ({ Update: request.key }), { key: 'k' }), { Update: 'k' });
-            assert.deepStrictEqual(named.modify('fn', (item$, request) => ({ ...item$, a: request.a }), { id: 1 }, { a: 2 }), { id: 1, a: 2 });
-        })
-
         it('fails an assert for a definition without the implementation', function() {
             assert.throws(() => named.operation('modifyOnly', { name: 'modifyOnly', modify: item$ => item$ }, {}), /named operation \(name=modifyOnly\) does not define a DynamoDB implementation/);
             assert.throws(() => named.modify('operationOnly', { name: 'operationOnly', operation: {} }, {}, {}), /named operation \(name=operationOnly\) does not define modify/);
         })
     })
 
-    describe('configure', function() {
-        it('adds the definitions as they are', function() {
-            const target = {};
-            const def = { name: 'a', parameters: { type: 'string' }, query: {} };
-            const fn = () => ({});
-
-            named.configure('query', target, { a: def }, { fn });
-
-            assert.strictEqual(target.a, def);
-            assert.strictEqual(target.fn, fn);
-        })
-
-        it('fails an assert for a parameter type that is not defined', function() {
-            const target = {};
-            const bad = { name: 'unittest.bad', parameters: { to: { type: 'email' } }, query: {} };
-
-            assert.throws(() => named.configure('query', target, { 'unittest.bad': bad }), e => e.name === 'AssertionError' && /query parameter type is not defined \(query=unittest.bad; parameter=to; type=email\)/.test(e.message));
-            assert.throws(() => named.configure('operation', target, { 'unittest.bad': bad }), /operation parameter type is not defined \(operation=unittest.bad/);
-            assert.strictEqual(target['unittest.bad'], undefined);
-        })
-    })
 })

@@ -7,23 +7,22 @@ const named = require('../named');
 
 /**
  * NOTE: gell-promote copy of gell-aws-dynamodb mock/queries: runs a named query definition's filter with
- * named.filter (validates and coerces its args), so the store holds the definitions as registered (no query-wrapper);
- * a query error is yielded (the future survives it)
+ * named.filter (validates and coerces its args), looking definitions up in the store's registry (store.queries, a
+ * gell-discover Queries); a query error is yielded (the future survives it)
  */
 /**
  * Implements named queries for mock implementations.  Yields stream of items returned from the
  * named query
  * 
  * NOTES
- * 	- named query must resolve to a function
- * 		- arguments to function are (items, queryArgs)
+ * 	- a named query definition's filter is called with (items, queryArgs)
  * 	- named query can return an array, which will be converted to a stream (iterator)
  * 
- * @param {*} namedQueries 
+ * @param {*} queries_ the store's query registry (gell-discover Queries)
  * @param {*} items 
  */
-module.exports = function* queries(namedQueries, items) {
-	assert(namedQueries, 'namedQueries is required');
+module.exports = function* queries(queries_, items) {
+	assert(queries_, 'queries_ is required');
 	assert(_.isArray(items), 'queries future requires items array');
 
 	let arg = yield new State();
@@ -31,7 +30,7 @@ module.exports = function* queries(namedQueries, items) {
 	function doQuery({ namedQuery, ...queryArgs }) {
 		assert(namedQuery, "namedQuery is required");
 
-		const def = namedQueries[namedQuery];
+		const def = queries_.get(namedQuery);
 		assert(def, `no named query (name=${namedQuery}) defined`);
 
 		const result = named.filter(namedQuery, def, items, queryArgs);

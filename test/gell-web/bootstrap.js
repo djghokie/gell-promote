@@ -26,12 +26,7 @@ function setupTypes(deps) {
 
 function setupStore(deps) {
     const store = new MockStore();
-    store.configureQueries(
-        sessionQueries,
-        activeQueries,
-        activityQueries,
-        webQueries,
-    );
+    [sessionQueries, activeQueries, activityQueries, webQueries].forEach(mod => store.queries.registerModule(mod));
     
     deps.define('store', store);
     this.store = store;

@@ -14,8 +14,8 @@ exports.__metadata = {
 }
 
 /**
- * NOTE: reads the `queries` dependency (a gell-discover Queries registry), which the store's namedQueries
- * should be built from; queries added directly to store.namedQueries are not listed
+ * NOTE: reads the `queries` dependency (a gell-discover Queries registry): the store's own registry
+ * (store.queries)
  */
 function listQueries(deps) {
     const { queries } = deps.resolve('queries');

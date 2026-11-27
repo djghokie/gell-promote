@@ -24,11 +24,7 @@ describe('APPLICATION extension of the namespace stereotype', function() {
 
     beforeEach(function() {
         const store = new MockStore();
-        store.configureQueries(
-            sessionQueries,
-            activeQueries,
-            activityQueries,
-        );
+        [sessionQueries, activeQueries, activityQueries].forEach(mod => store.queries.registerModule(mod));
 
         this.deps.define('store', store);
 

@@ -7,8 +7,6 @@ const sessionOperations = require('gell-session/dynamodb/operations');
 const MockStore = require('../../gell-aws-dynamodb/mock/store');
 const discover = require('../../gell-discover/node');
 const { Types } = require('../../gell-discover/domain/types');
-const { Queries } = require('../../gell-discover/domain/queries');
-const { Operations } = require('../../gell-discover/domain/operations');
 
 const tenant = require('../../gell-namespace/domain/tenant');
 
@@ -44,20 +42,12 @@ function setupTypes(deps) {
 }
 
 function setupStore(deps) {
-    const queries = new Queries();
-    queries.registerModule(sessionQueries);
-    queries.registerModule(activeQueries);
-    queries.registerModule(activityQueries);
-
-    const operations = new Operations();
-    operations.registerModule(sessionOperations);
-
     const store = new MockStore('type', 'id');
-    store.configureQueries(queries.definitions());
-    store.configureOperations(operations.definitions());
+    [sessionQueries, activeQueries, activityQueries].forEach(mod => store.queries.registerModule(mod));
+    store.operations.registerModule(sessionOperations);
 
-    deps.define('queries', queries);
-    deps.define('operations', operations);
+    deps.define('queries', store.queries);
+    deps.define('operations', store.operations);
     deps.define('store', store);
 
     return store;

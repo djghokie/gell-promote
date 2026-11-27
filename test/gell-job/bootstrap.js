@@ -6,8 +6,6 @@ const sessionOperations = require('gell-session/dynamodb/operations');
 const MockStore = require('../../gell-aws-dynamodb/mock/store');
 const discover = require('../../gell-discover/node');
 const { Types } = require('../../gell-discover/domain/types');
-const { Queries } = require('../../gell-discover/domain/queries');
-const { Operations } = require('../../gell-discover/domain/operations');
 const browser = require('../../gell-web/domain/browser');
 
 const execution = require('../../gell-job/domain/execution');
@@ -26,17 +24,9 @@ exports.beforeEach = function() {
     types.register(execution.TYPE, execution.model, 'ECOSYSTEM');
     types.set('namespace', NAMESPACE, 'ECOSYSTEM');
 
-    const queries = new Queries();
-    queries.registerModule(sessionQueries);
-    queries.registerModule(activityQueries);
-    queries.registerModule(jobQueries);
-
-    const operations = new Operations();
-    operations.registerModule(sessionOperations);
-
     const store = new MockStore('type', 'id');
-    store.configureQueries(queries.definitions());
-    store.configureOperations(operations.definitions());
+    [sessionQueries, activityQueries, jobQueries].forEach(mod => store.queries.registerModule(mod));
+    store.operations.registerModule(sessionOperations);
 
     this.deps.define('types', types);
     this.deps.define('store', store);

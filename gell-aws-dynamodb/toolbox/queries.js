@@ -9,10 +9,11 @@ const named = require('../named');
 
 /**
  * NOTE: gell-promote copy of gell-aws-dynamodb toolbox/queries: runs a named query definition with named.query
- * (validates and coerces its args), so the store holds the definitions as registered (no query-wrapper)
+ * (validates and coerces its args), looking definitions up in the store's registry (store.queries, a gell-discover
+ * Queries)
  */
-module.exports = function* queries(namedQueries, deps) {
-	assert(namedQueries, 'namedQueries is required');
+module.exports = function* queries(queries_, deps) {
+	assert(queries_, 'queries_ is required');
 	assert(deps, 'queries future requires deps');
 
 	const logger = deps.resolveSingle('logger');
@@ -22,7 +23,7 @@ module.exports = function* queries(namedQueries, deps) {
 	function doQuery({ namedQuery, ...queryArgs }) {
 		assert(namedQuery, "namedQuery is required");
 
-		const def = namedQueries[namedQuery];
+		const def = queries_.get(namedQuery);
 		assert(def, `no named query (name=${namedQuery}) defined`);
 
 		const q = named.query(namedQuery, def, queryArgs);

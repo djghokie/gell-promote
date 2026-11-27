@@ -5,7 +5,7 @@ const { Queries } = require('../../gell-discover/domain/queries');
 const { Operations } = require('../../gell-discover/domain/operations');
 
 /**
- * Queries and Operations share the same register/registerModule/names/definitions/describe behavior
+ * Queries and Operations share the same register/registerModule/names/describe behavior
  *  - NOTE: see WIP in gell-discover/domain/operations.js about sharing a base class
  */
 const REGISTRIES = [
@@ -59,6 +59,13 @@ REGISTRIES.forEach(({ label, Registry, kind, fn }) => {
                     /\(name=unittest.one\) is already registered/
                 );
             })
+
+            it('fails an assert for a parameter type that is not defined', function() {
+                const bad = definition('unittest.bad', { parameters: { to: { type: 'email' } } });
+
+                assert.throws(() => registry.register(bad), e => e.name === 'AssertionError' && new RegExp(`${kind} parameter type is not defined \\(${kind}=unittest.bad; parameter=to; type=email\\)`).test(e.message));
+                assert.strictEqual(registry.get('unittest.bad'), undefined);
+            })
         })
 
         describe('registerModule', function() {
@@ -98,26 +105,6 @@ REGISTRIES.forEach(({ label, Registry, kind, fn }) => {
                 registry.register(definition('unittest.a'));
 
                 assert.deepStrictEqual(Array.from(registry.names()), ['unittest.b', 'unittest.a']);
-            })
-        })
-
-        describe('definitions', function() {
-            it('no definitions', function() {
-                assert.deepStrictEqual(registry.definitions(), {});
-            })
-
-            it('returns the full definitions keyed by name', function() {
-                const one = definition('unittest.one');
-                const two = definition('unittest.two');
-
-                registry.registerModule({ one, two });
-
-                const defs = registry.definitions();
-
-                assert.deepStrictEqual(Object.keys(defs).sort(), ['unittest.one', 'unittest.two']);
-                assert.strictEqual(defs['unittest.one'], one);
-                assert.strictEqual(defs['unittest.two'], two);
-                assert.strictEqual(typeof defs['unittest.one'][fn], 'function');
             })
         })
 

@@ -2,11 +2,15 @@ const assert = require('assert');
 
 const { State } = require('gell');
 
+const { compileParams } = require('../../gell-event/binding/compiler');
+const { TYPES } = require('../../gell-dispatch/rules/type');
+
 /**
  * Registry of gell-aws-dynamodb named operation definitions ({ name, description, parameters, modify, operation })
  *
- * NOTE: the store (gell-promote/gell-aws-dynamodb) holds these definitions as registered (configureOperations); this keeps them so
- * the store's operations and their metadata come from the same source
+ * NOTE: the store (gell-promote/gell-aws-dynamodb store, mock/store) creates one (store.operations) and looks its
+ * operation definitions up in it, so the store's operations and their metadata come from the same source; register asserts
+ * every parameter type is defined (gell-dispatch/rules/type TYPES)
  *
  * WIP:
  *  - share a base class with Queries? register/registerModule/names/definitions/describe are identical
@@ -22,6 +26,10 @@ class Operations extends State {
         assert(name, `operation must define "name" attribute to be registered`);
         assert(!this.get(name), `operation (name=${name}) is already registered`);
 
+        Object.values(compileParams(def.parameters)).forEach(({ name: parameter, type }) => {
+            assert(TYPES[type], `operation parameter type is not defined (operation=${name}; parameter=${parameter}; type=${type})`);
+        });
+
         this.set(name, def);
     }
 
@@ -34,17 +42,6 @@ class Operations extends State {
 
     names() {
         return this._internal.keys();
-    }
-
-    /**
-     * full definitions keyed by name; add to a store with store.configureOperations
-     */
-    definitions() {
-        const defs = {};
-
-        for (const name of this.names()) defs[name] = this.get(name);
-
-        return defs;
     }
 
     /**

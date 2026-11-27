@@ -20,11 +20,7 @@ function configureEvents() {
 
 function setupStore() {
     const store = new MockStore();
-    store.configureQueries(
-        sessionQueries,
-        activeQueries,
-        activityQueries,
-    );
+    [sessionQueries, activeQueries, activityQueries].forEach(mod => store.queries.registerModule(mod));
     
     this.deps.define('store', store);
     this.store = store;

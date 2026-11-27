@@ -7,6 +7,7 @@ const _ = require('lodash');
  *      - store.namedQueries
  *          - this is currently just a map
  *          - metadata isn't included
+ *          - NOTE: now store.queries (gell-promote/gell-aws-dynamodb stores), a Queries registry with metadata
  *      - this snapshot
  *  - is there a compilation process?
  */

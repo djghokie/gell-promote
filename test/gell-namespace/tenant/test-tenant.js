@@ -7,7 +7,6 @@ const activityQueries = require('gell-session/dynamodb/activity/queries');
 
 const MockStore = require('../../../gell-aws-dynamodb/mock/store');
 const { Types } = require('../../../gell-discover/domain/types');
-const { Queries } = require('../../../gell-discover/domain/queries');
 
 const tenant = require('../../../gell-namespace/domain/tenant');
 const member = require('../../../gell-web/member/domain/member');
@@ -32,12 +31,9 @@ describe('gell-namespace TENANT administration', function() {
         types.register(note.TYPE, note.model, 'TENANT');
         types.register(member.TYPE, member.model, 'APPLICATION');
 
-        const queries = new Queries();
-        queries.registerModule(sessionQueries);
-        queries.registerModule(activityQueries);
-
         const store = new MockStore('type', 'id');
-        store.configureQueries(queries.definitions());
+        store.queries.registerModule(sessionQueries);
+        store.queries.registerModule(activityQueries);
 
         this.deps.define('types', types);
         this.deps.define('store', store);

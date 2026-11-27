@@ -14,8 +14,8 @@ exports.__metadata = {
 }
 
 /**
- * NOTE: reads the `operations` dependency (a gell-discover Operations registry), which the store's
- * namedOperations should be built from
+ * NOTE: reads the `operations` dependency (a gell-discover Operations registry): the store's own registry
+ * (store.operations)
  */
 function listOperations(deps) {
     const { operations } = deps.resolve('operations');

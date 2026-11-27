@@ -5,14 +5,16 @@ const { init } = require('gell/future');
 
 const Store = require('gell-aws-dynamodb/mock/store');
 
-const named = require('../named');
+const { Queries } = require('../../gell-discover/domain/queries');
+const { Operations } = require('../../gell-discover/domain/operations');
+
 const queries = require('./queries');
 const write = require('./write');
 
 /**
- * In-memory store (gell-aws-dynamodb mock/store) that runs named query and operation definitions as registered
- *  - configureQueries / configureOperations add definitions (maps by name, e.g. a query module or a registry's
- *    definitions()), asserting their parameter types; a definition that is a function is added as it is
+ * In-memory store (gell-aws-dynamodb mock/store) that keeps the named query and operation registries
+ *  - store.queries (gell-discover Queries) and store.operations (gell-discover Operations): register definitions on
+ *    them (e.g. store.queries.registerModule(queries)), which asserts their parameter types
  *  - a named query runs its definition's filter, and a named operation its modify, with the args validated and
  *    coerced (see named)
  */
@@ -21,15 +23,14 @@ module.exports = class extends Store {
     constructor(...args) {
         super(...args);
 
-        [this.$queries] = init(queries(this.namedQueries, this.saved));
-    }
+        // NOTE: the npm store's maps (namedQueries, writeOptions.namedOperations) are removed; the registries replace them
+        delete this.namedQueries;
+        delete this.writeOptions;
 
-    configureQueries(...queries) {
-        named.configure('query', this.namedQueries, ...queries);
-    }
+        this.queries = new Queries();
+        this.operations = new Operations();
 
-    configureOperations(...operations) {
-        named.configure('operation', this.writeOptions.namedOperations, ...operations);
+        [this.$queries] = init(queries(this.queries, this.saved));
     }
 
     /**
@@ -48,7 +49,7 @@ module.exports = class extends Store {
     }
 
     write() {
-        const [$txn] = init(write(this, this.writeOptions));
+        const [$txn] = init(write(this, { operations: this.operations }));
 
         return $txn;
     }

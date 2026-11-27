@@ -5,14 +5,10 @@ const { State } = require('gell');
 
 const named = require('../named');
 
-const DEFAULT_OPTIONS = {
-	namedOperations: {}
-}
-
 /**
  * NOTE: gell-promote copy of gell-aws-dynamodb mock/write: namedOperation runs a named operation definition's modify
- * with named.modify (validates and coerces its request), so the store holds the definitions as registered (no
- * operation-wrapper)
+ * with named.modify (validates and coerces its request), looking definitions up in the store's registry
+ * (options.operations: store.operations, a gell-discover Operations)
  */
 /**
  * Mocks a write transaction
@@ -35,11 +31,12 @@ const DEFAULT_OPTIONS = {
  */
 module.exports = function* write(store, options) {
 	assert(store, 'store is required')
+	const { operations: operations_ } = options || {};
+	assert(operations_, 'options.operations is required');
 
 	const state = new State();
 
 	// TODO: store following with State
-	const mergedOptions = _.defaults(options, DEFAULT_OPTIONS);
 	const requests = [];
 	let error = false;
 
@@ -90,7 +87,7 @@ module.exports = function* write(store, options) {
 	}
 
 	async function namedOperation(request) {
-		const def = mergedOptions.namedOperations[request.name];
+		const def = operations_.get(request.name);
 
 		assert(def, `namedOperation (name=${request.name}) is not mocked`);
 
@@ -113,7 +110,7 @@ module.exports = function* write(store, options) {
 		if (name) {
 			assert(_.isString(name, '"name" must be string referencing named operation'));
 
-			assert(mergedOptions.namedOperations[name], `no named operation (name=${request.name})`);
+			assert(operations_.get(name), `no named operation (name=${request.name})`);
 		} else {
 			assert(_.isString(operation));
 

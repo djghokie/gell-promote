@@ -32,7 +32,7 @@ describe('MEMBER', function() {
     beforeEach(async function() {
         store = this.deps.resolveSingle('store');
         // NOTE: session.update (web.member.update) is a named operation; same as test/gell-session/util/test-event.js
-        store.configureOperations(sessionOperations);
+        store.operations.registerModule(sessionOperations);
 
         types = this.deps.resolveSingle('types');
         types.set('namespace', APPLICATION_ID, 'APPLICATION');
