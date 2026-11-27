@@ -1,9 +1,7 @@
-const describe = require('../../../snapshot/describe');
-
-const { httpError } = require('../../describe');
+const describe = require('../../gell-metadata/snapshot/describe');
 
 exports.__metadata = {
-    name: 'gell.domain.operation',
+    name: 'store.named.operation',
     description: 'describes a registered named operation',
     triggers: {
         api: {
@@ -20,7 +18,7 @@ exports.api = async function({ params={}, deps }) {
 
     const { name } = params;
 
-    logger.info(`executing api (name="gell.domain.operation"; operation=${name})`);
+    logger.info(`executing api (name="store.named.operation"; operation=${name})`);
 
     const operation$ = await describe.effect({
         params: { name },
@@ -30,7 +28,7 @@ exports.api = async function({ params={}, deps }) {
         deps
     });
 
-    if (!operation$) throw httpError(`operation not found (name=${name})`, 404);
+    if (!operation$) throw Object.assign(new Error(`operation not found (name=${name})`), { status: 404 });
 
     return operation$;
 }

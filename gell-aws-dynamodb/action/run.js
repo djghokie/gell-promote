@@ -1,7 +1,5 @@
 const assert = require('assert');
 
-const { httpError } = require('../../describe');
-
 // WIP: the administrator role name is a gell-web/gell-auth convention; make it configurable if a project differs
 const ROLE_ADMINISTRATOR = 'administrator';
 
@@ -9,7 +7,7 @@ const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 1000;
 
 exports.__metadata = {
-    name: 'gell.domain.query.run',
+    name: 'store.query.run',
     description: 'runs a registered named query with arguments, returning at most limit items',
     triggers: {
         effect: {
@@ -38,7 +36,7 @@ function parseArgs(args) {
     try {
         return JSON.parse(args);
     } catch {
-        throw httpError(`args must be JSON (args=${args})`, 400);
+        throw Object.assign(new Error(`args must be JSON (args=${args})`), { status: 400 });
     }
 }
 
@@ -55,7 +53,7 @@ function coerceArgs(query$, args={}) {
         let val = args[name];
 
         if (val === undefined || val === null || val === '') {
-            if (!optional) throw httpError(`query (name=${query$.name}) missing required parameter (name=${name})`, 400);
+            if (!optional) throw Object.assign(new Error(`query (name=${query$.name}) missing required parameter (name=${name})`), { status: 400 });
 
             return;
         }
@@ -63,7 +61,7 @@ function coerceArgs(query$, args={}) {
         if ((type === 'number' || type === 'timestamp') && typeof val === 'string') {
             val = Number(val);
 
-            if (Number.isNaN(val)) throw httpError(`query (name=${query$.name}) parameter (name=${name}) must be a number`, 400);
+            if (Number.isNaN(val)) throw Object.assign(new Error(`query (name=${query$.name}) parameter (name=${name}) must be a number`), { status: 400 });
         }
 
         if (type === 'boolean' && typeof val === 'string') val = val === 'true';
@@ -100,7 +98,7 @@ exports.effect = async function({ params={}, deps }) {
 
     const { name, args={}, limit=DEFAULT_LIMIT } = params;
 
-    logger.info(`executing effect (name="gell.domain.query.run"; query=${name})`);
+    logger.info(`executing effect (name="store.query.run"; query=${name})`);
 
     assert(name, 'name is required');
 
@@ -126,11 +124,11 @@ exports.effect = async function({ params={}, deps }) {
 exports.api = async function({ caller, params={}, deps }) {
     const role = caller && caller.snapshotAttribute('role');
 
-    if (role !== ROLE_ADMINISTRATOR) throw httpError('unauthorized (role=administrator required)', 403);
+    if (role !== ROLE_ADMINISTRATOR) throw Object.assign(new Error('unauthorized (role=administrator required)'), { status: 403 });
 
     const run$ = await exports.effect({ params, deps });
 
-    if (!run$) throw httpError(`query not found (name=${params.name})`, 404);
+    if (!run$) throw Object.assign(new Error(`query not found (name=${params.name})`), { status: 404 });
 
     return run$;
 }

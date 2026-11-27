@@ -6,7 +6,7 @@ const _ = require('lodash');
  *
  * NOTE: lenient, to match how 'object' params are used today
  *  - an array passes (e.g. TASKLIST items is declared 'object')
- *  - a string passes when it parses as a JSON object or array (e.g. gell.domain.query.run's args on a GET); the
+ *  - a string passes when it parses as a JSON object or array (e.g. store.query.run's args on a GET); the
  *    handler still receives the string and parses it
  *
  * NOTE: a blank optional argument ('' or null) passes (allowBlank)

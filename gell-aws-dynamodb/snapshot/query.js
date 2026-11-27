@@ -1,9 +1,7 @@
-const describe = require('../../../snapshot/describe');
-
-const { httpError } = require('../../describe');
+const describe = require('../../gell-metadata/snapshot/describe');
 
 exports.__metadata = {
-    name: 'gell.domain.query',
+    name: 'store.named.query',
     description: 'describes a registered named query',
     triggers: {
         api: {
@@ -20,7 +18,7 @@ exports.api = async function({ params={}, deps }) {
 
     const { name } = params;
 
-    logger.info(`executing api (name="gell.domain.query"; query=${name})`);
+    logger.info(`executing api (name="store.named.query"; query=${name})`);
 
     const query$ = await describe.effect({
         params: { name },
@@ -30,7 +28,7 @@ exports.api = async function({ params={}, deps }) {
         deps
     });
 
-    if (!query$) throw httpError(`query not found (name=${name})`, 404);
+    if (!query$) throw Object.assign(new Error(`query not found (name=${name})`), { status: 404 });
 
     return query$;
 }

@@ -18,9 +18,9 @@ const actionsSnapshot = require('../../gell-metadata/dispatch/action/snapshot/ac
 const snapshotsSnapshot = require('../../gell-metadata/dispatch/snapshot/snapshot/snapshots');
 const actionSnapshot = require('../../gell-metadata/dispatch/action/snapshot/action');
 const snapshotSnapshot = require('../../gell-metadata/dispatch/snapshot/snapshot/snapshot');
-const queriesSnapshot = require('../../gell-metadata/store/query/snapshot/queries');
-const queryRunSnapshot = require('../../gell-metadata/store/query/snapshot/run');
-const operationsSnapshot = require('../../gell-metadata/store/operation/snapshot/operations');
+const queriesSnapshot = require('../../gell-aws-dynamodb/snapshot/queries');
+const queryRunSnapshot = require('../../gell-aws-dynamodb/action/run');
+const operationsSnapshot = require('../../gell-aws-dynamodb/snapshot/operations');
 const jobsSnapshot = require('../../gell-metadata/job/snapshot/jobs');
 const jobSnapshot = require('../../gell-metadata/job/snapshot/job');
 
@@ -404,7 +404,7 @@ describe('gell-metadata', function() {
         })
     })
 
-    describe('gell.domain.queries', function() {
+    describe('store.named.queries', function() {
         it('returns named queries registered with the store', async function() {
             const queries$ = await queriesSnapshot.api({ params: {}, deps: this.deps });
 
@@ -440,7 +440,7 @@ describe('gell-metadata', function() {
         })
     })
 
-    describe('gell.domain.query.run', function() {
+    describe('store.query.run', function() {
         const administrator = { snapshotAttribute: name => name === 'role' ? 'administrator' : undefined };
 
         async function runQuery(params, caller=administrator) {
@@ -504,7 +504,7 @@ describe('gell-metadata', function() {
         })
     })
 
-    describe('gell.domain.operations', function() {
+    describe('store.named.operations', function() {
         it('returns named operations registered with the store', async function() {
             const operations$ = await operationsSnapshot.api({ params: {}, deps: this.deps });
 

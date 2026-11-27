@@ -2,10 +2,10 @@ const assert = require('assert');
 
 const runtime = require('gell-runtime/mocha');
 
-const Store = require('../../../../../gell-aws-dynamodb/mock/store');
+const Store = require('../../../gell-aws-dynamodb/mock/store');
 
-const operationsSnapshot = require('../../../../../gell-metadata/store/operation/snapshot/operations');
-const operationSnapshot = require('../../../../../gell-metadata/store/operation/snapshot/operation');
+const operationsSnapshot = require('../../../gell-aws-dynamodb/snapshot/operations');
+const operationSnapshot = require('../../../gell-aws-dynamodb/snapshot/operation');
 
 const OPERATIONS = {
     touch: {
@@ -23,7 +23,7 @@ const OPERATIONS = {
     },
 }
 
-describe('gell-metadata store operations', function() {
+describe('gell-aws-dynamodb named operation snapshots', function() {
     before(runtime.beforeAll);
 
     beforeEach(function() {
@@ -33,7 +33,7 @@ describe('gell-metadata store operations', function() {
         this.deps.define('store', store);
     })
 
-    describe('gell.domain.operations', function() {
+    describe('store.named.operations', function() {
         it('returns metadata of every registered operation, sorted by name', async function() {
             const operations$ = await operationsSnapshot.api({ params: {}, deps: this.deps });
 
@@ -50,7 +50,7 @@ describe('gell-metadata store operations', function() {
         })
     })
 
-    describe('gell.domain.operation', function() {
+    describe('store.named.operation', function() {
         it('returns operation metadata by name', async function() {
             const operation$ = await operationSnapshot.api({ params: { name: 'unittest.touch' }, deps: this.deps });
 

@@ -2,11 +2,9 @@ const assert = require('assert');
 
 const runtime = require('gell-runtime/mocha');
 
-const Store = require('../../../../../gell-aws-dynamodb/mock/store');
+const Store = require('../../../gell-aws-dynamodb/mock/store');
 
-const queriesSnapshot = require('../../../../../gell-metadata/store/query/snapshot/queries');
-const querySnapshot = require('../../../../../gell-metadata/store/query/snapshot/query');
-const queryRunSnapshot = require('../../../../../gell-metadata/store/query/snapshot/run');
+const queryRunSnapshot = require('../../../gell-aws-dynamodb/action/run');
 
 const QUERIES = {
     byType: {
@@ -28,7 +26,7 @@ const QUERIES = {
 const ADMINISTRATOR = { snapshotAttribute: name => name === 'role' ? 'administrator' : undefined };
 const USER = { snapshotAttribute: name => name === 'role' ? 'user' : undefined };
 
-describe('gell-metadata store queries', function() {
+describe('gell-aws-dynamodb query run', function() {
     before(runtime.beforeAll);
 
     beforeEach(async function() {
@@ -40,47 +38,7 @@ describe('gell-metadata store queries', function() {
         this.deps.define('store', store);
     })
 
-    describe('gell.domain.queries', function() {
-        it('returns metadata of every registered query, sorted by name', async function() {
-            const queries$ = await queriesSnapshot.api({ params: {}, deps: this.deps });
-
-            assert.deepStrictEqual(queries$, [
-                {
-                    name: 'unittest.rank',
-                    description: 'items by type, optionally with a minimum rank',
-                    parameters: [
-                        { name: 'type', type: 'string', optional: false },
-                        { name: 'rank', type: 'number', optional: true },
-                    ],
-                },
-                {
-                    name: 'unittest.type',
-                    description: 'items by type',
-                    parameters: [
-                        { name: 'type', type: 'string', optional: false },
-                    ],
-                },
-            ]);
-        })
-    })
-
-    describe('gell.domain.query', function() {
-        it('returns query metadata by name', async function() {
-            const query$ = await querySnapshot.api({ params: { name: 'unittest.type' }, deps: this.deps });
-
-            assert.deepStrictEqual(query$, {
-                name: 'unittest.type',
-                description: 'items by type',
-                parameters: [{ name: 'type', type: 'string', optional: false }],
-            });
-        })
-
-        it('reports an unknown query as 404', async function() {
-            await assert.rejects(querySnapshot.api({ params: { name: 'unittest.missing' }, deps: this.deps }), { status: 404, message: 'query not found (name=unittest.missing)' });
-        })
-    })
-
-    describe('gell.domain.query.run', function() {
+    describe('store.query.run', function() {
         async function runQuery(params, caller=ADMINISTRATOR) {
             return queryRunSnapshot.api({ caller, params, deps: this.deps });
         }

@@ -1,8 +1,8 @@
-const all = require('../../../snapshot/all');
+const all = require('../../gell-metadata/snapshot/all');
 
 exports.__metadata = {
-    name: 'gell.domain.queries',
-    description: 'returns all registered named queries',
+    name: 'store.named.operations',
+    description: 'returns all registered named operations',
     triggers: {
         effect: {
             params: {}
@@ -16,11 +16,11 @@ exports.__metadata = {
 exports.api = async function({ params={}, deps }) {
     const { logger, store } = deps.resolve('logger', 'store');
 
-    logger.info('executing api (name="gell.domain.queries")');
+    logger.info('executing api (name="store.named.operations")');
 
     return all.effect({
         context: {
-            registry_: store.queries
+            registry_: store.operations
         },
         deps
     });
