@@ -96,7 +96,7 @@ async function take($items, limit) {
 }
 
 exports.effect = async function({ params={}, deps }) {
-    const { logger, queries, store } = deps.resolve('logger', 'queries', 'store');
+    const { logger, store } = deps.resolve('logger', 'store');
 
     const { name, args={}, limit=DEFAULT_LIMIT } = params;
 
@@ -104,7 +104,7 @@ exports.effect = async function({ params={}, deps }) {
 
     assert(name, 'name is required');
 
-    const query$ = queries.describe(name);
+    const query$ = store.queries.describe(name);
 
     if (!query$) return;
 

@@ -14,13 +14,12 @@ exports.__metadata = {
 }
 
 /**
- * NOTE: reads the `operations` dependency (a gell-discover Operations registry): the store's own registry
- * (store.operations)
+ * NOTE: reads the store's operation registry (store.operations, a gell-discover Operations)
  */
 function listOperations(deps) {
-    const { operations } = deps.resolve('operations');
+    const { store } = deps.resolve('store');
 
-    return describeAll(operations);
+    return describeAll(store.operations);
 }
 
 exports.effect = async function({ params={}, deps }) {

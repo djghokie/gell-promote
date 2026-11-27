@@ -16,7 +16,7 @@ exports.__metadata = {
 }
 
 exports.effect = async function({ params={}, deps }) {
-    const { logger, queries } = deps.resolve('logger', 'queries');
+    const { logger, store } = deps.resolve('logger', 'store');
 
     logger.info('executing effect (name="gell.domain.query")');
 
@@ -24,7 +24,7 @@ exports.effect = async function({ params={}, deps }) {
 
     assert(name, 'name is required');
 
-    return queries.describe(name);
+    return store.queries.describe(name);
 }
 
 /**

@@ -2,7 +2,7 @@ const assert = require('assert');
 
 const runtime = require('gell-runtime/mocha');
 
-const { Operations } = require('../../../../../gell-discover/domain/operations');
+const Store = require('../../../../../gell-aws-dynamodb/mock/store');
 
 const operationsSnapshot = require('../../../../../gell-metadata/store/operation/snapshot/operations');
 const operationSnapshot = require('../../../../../gell-metadata/store/operation/snapshot/operation');
@@ -27,10 +27,10 @@ describe('gell-metadata store operations', function() {
     before(runtime.beforeAll);
 
     beforeEach(function() {
-        const operations_ = new Operations();
-        operations_.registerModule(OPERATIONS);
+        const store = new Store('type', 'id');
+        store.operations.registerModule(OPERATIONS);
 
-        this.deps.define('operations', operations_);
+        this.deps.define('store', store);
     })
 
     describe('gell.domain.operations', function() {

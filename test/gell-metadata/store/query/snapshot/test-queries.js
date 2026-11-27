@@ -38,7 +38,6 @@ describe('gell-metadata store queries', function() {
 
         for (const rank of [1, 2, 3]) await store.save({ type: 'UNITTEST#ITEM', id: `item-${rank}`, rank });
 
-        this.deps.define('queries', store.queries);
         this.deps.define('store', store);
     })
 

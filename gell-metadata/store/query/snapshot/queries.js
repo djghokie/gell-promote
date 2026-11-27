@@ -14,13 +14,12 @@ exports.__metadata = {
 }
 
 /**
- * NOTE: reads the `queries` dependency (a gell-discover Queries registry): the store's own registry
- * (store.queries)
+ * NOTE: reads the store's query registry (store.queries, a gell-discover Queries)
  */
 function listQueries(deps) {
-    const { queries } = deps.resolve('queries');
+    const { store } = deps.resolve('store');
 
-    return describeAll(queries);
+    return describeAll(store.queries);
 }
 
 exports.effect = async function({ params={}, deps }) {

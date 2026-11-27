@@ -46,8 +46,6 @@ function setupStore(deps) {
     [sessionQueries, activeQueries, activityQueries].forEach(mod => store.queries.registerModule(mod));
     store.operations.registerModule(sessionOperations);
 
-    deps.define('queries', store.queries);
-    deps.define('operations', store.operations);
     deps.define('store', store);
 
     return store;
