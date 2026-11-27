@@ -103,7 +103,7 @@ describe('gell-aws-dynamodb stores', function() {
             const bad = { name: 'unittest.bad', parameters: { to: 'email' }, query: {} };
 
             assert.throws(() => store.queries.register(bad), /query parameter type is not defined \(query=unittest.bad; parameter=to; type=email\)/);
-            assert.throws(() => store.operations.register(bad), /operation parameter type is not defined/);
+            assert.throws(() => store.operations.register(bad), /operation parameter type is not defined \(operation=unittest.bad/);
         })
 
         it('fails an assert for a named query or operation that is not registered', async function() {

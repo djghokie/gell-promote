@@ -5,8 +5,7 @@ const { init } = require('gell/future');
 
 const Store = require('gell-aws-dynamodb/mock/store');
 
-const { Queries } = require('../../gell-discover/domain/queries');
-const { Operations } = require('../../gell-discover/domain/operations');
+const { Registry } = require('../../gell-metadata/registry');
 
 const queries = require('./queries');
 const write = require('./write');
@@ -27,8 +26,8 @@ module.exports = class extends Store {
         delete this.namedQueries;
         delete this.writeOptions;
 
-        this.queries = new Queries();
-        this.operations = new Operations();
+        this.queries = new Registry('query');
+        this.operations = new Registry('operation');
 
         [this.$queries] = init(queries(this.queries, this.saved));
     }

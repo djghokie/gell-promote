@@ -1,20 +1,19 @@
 const assert = require('assert');
 const _ = require('lodash');
 
-const { Queries } = require('../../gell-discover/domain/queries');
-const { Operations } = require('../../gell-discover/domain/operations');
+const { Registry } = require('../../gell-metadata/registry');
 
 /**
- * Queries and Operations share the same register/registerModule/names/describe behavior
- *  - NOTE: see WIP in gell-discover/domain/operations.js about sharing a base class
+ * The store keeps one Registry for its named queries (store.queries) and one for its named operations
+ * (store.operations); both are checked with each kind of definition
  */
-const REGISTRIES = [
-    { label: 'queries registry', Registry: Queries, kind: 'query', fn: 'query' },
-    { label: 'operations registry', Registry: Operations, kind: 'operation', fn: 'operation' },
+const KINDS = [
+    { kind: 'query', fn: 'query' },
+    { kind: 'operation', fn: 'operation' },
 ];
 
-REGISTRIES.forEach(({ label, Registry, kind, fn }) => {
-    describe(label, function() {
+KINDS.forEach(({ kind, fn }) => {
+    describe(`gell-metadata registry (${kind} definitions)`, function() {
 
         let registry;
 
@@ -30,7 +29,7 @@ REGISTRIES.forEach(({ label, Registry, kind, fn }) => {
         }
 
         beforeEach(function() {
-            registry = new Registry();
+            registry = new Registry(kind);
         })
 
         describe('register', function() {
@@ -49,6 +48,10 @@ REGISTRIES.forEach(({ label, Registry, kind, fn }) => {
 
             it('rejects a definition without a name', function() {
                 assert.throws(() => registry.register({ description: 'no name' }), /must define "name" attribute/);
+            })
+
+            it('names definitions "definition" by default', function() {
+                assert.throws(() => new Registry().register({ name: 'unittest.bad', parameters: { to: 'email' } }), /definition parameter type is not defined \(definition=unittest.bad; parameter=to; type=email\)/);
             })
 
             it('rejects a duplicate name', function() {

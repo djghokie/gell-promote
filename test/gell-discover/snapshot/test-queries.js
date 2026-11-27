@@ -8,7 +8,7 @@ const query = require('../../../gell-discover/snapshot/query');
 
 /**
  * NOTE: these snapshots read a plain-object `queryRegistry` dependency (name => definition), not the
- * gell-discover/domain/queries Queries registry (see WIP in snapshot/queries.js)
+ * store's query registry (gell-metadata/registry.js; see WIP in snapshot/queries.js)
  */
 const QUERY_REGISTRY = {
     'unittest.one': {

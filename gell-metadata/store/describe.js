@@ -1,6 +1,6 @@
 /**
- * Shared helpers for the gell-metadata snapshots, which read the gell-discover Queries/Operations registries
- * (gell-discover/domain/queries.js, gell-discover/domain/operations.js)
+ * Shared helpers for the gell-metadata snapshots, which read the store's registries (store.queries,
+ * store.operations; gell-metadata/registry.js)
  */
 
 /**

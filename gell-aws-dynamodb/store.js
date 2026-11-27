@@ -5,8 +5,7 @@ const { init } = require('gell/future');
 
 const Store = require('gell-aws-dynamodb/store/single');
 
-const { Queries } = require('../gell-discover/domain/queries');
-const { Operations } = require('../gell-discover/domain/operations');
+const { Registry } = require('../gell-metadata/registry');
 const page = require('gell-aws-dynamodb/toolbox/page');
 
 const named = require('./named');
@@ -30,8 +29,8 @@ module.exports = class extends Store {
         delete this.namedQueries;
         delete this.namedOperations;
 
-        this.queries = new Queries();
-        this.operations = new Operations();
+        this.queries = new Registry('query');
+        this.operations = new Registry('operation');
 
         [this.$queries] = init(queries(this.queries, deps));
     }
