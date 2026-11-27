@@ -5,6 +5,7 @@ const runtime = require('gell-runtime/mocha');
 const Store = require('../../../../../gell-aws-dynamodb/mock/store');
 
 const operationsSnapshot = require('../../../../../gell-metadata/store/operation/snapshot/operations');
+const operationSnapshot = require('../../../../../gell-metadata/store/operation/snapshot/operation');
 
 const OPERATIONS = {
     touch: {
@@ -49,4 +50,19 @@ describe('gell-metadata store operations', function() {
         })
     })
 
+    describe('gell.domain.operation', function() {
+        it('returns operation metadata by name', async function() {
+            const operation$ = await operationSnapshot.api({ params: { name: 'unittest.touch' }, deps: this.deps });
+
+            assert.deepStrictEqual(operation$, {
+                name: 'unittest.touch',
+                description: 'updates updatedTs',
+                parameters: [{ name: 'ts', type: 'timestamp', optional: true }],
+            });
+        })
+
+        it('reports an unknown operation as 404', async function() {
+            await assert.rejects(operationSnapshot.api({ params: { name: 'unittest.missing' }, deps: this.deps }), { status: 404, message: 'operation not found (name=unittest.missing)' });
+        })
+    })
 })

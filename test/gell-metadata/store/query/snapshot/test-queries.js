@@ -5,6 +5,7 @@ const runtime = require('gell-runtime/mocha');
 const Store = require('../../../../../gell-aws-dynamodb/mock/store');
 
 const queriesSnapshot = require('../../../../../gell-metadata/store/query/snapshot/queries');
+const querySnapshot = require('../../../../../gell-metadata/store/query/snapshot/query');
 const queryRunSnapshot = require('../../../../../gell-metadata/store/query/snapshot/run');
 
 const QUERIES = {
@@ -60,6 +61,22 @@ describe('gell-metadata store queries', function() {
                     ],
                 },
             ]);
+        })
+    })
+
+    describe('gell.domain.query', function() {
+        it('returns query metadata by name', async function() {
+            const query$ = await querySnapshot.api({ params: { name: 'unittest.type' }, deps: this.deps });
+
+            assert.deepStrictEqual(query$, {
+                name: 'unittest.type',
+                description: 'items by type',
+                parameters: [{ name: 'type', type: 'string', optional: false }],
+            });
+        })
+
+        it('reports an unknown query as 404', async function() {
+            await assert.rejects(querySnapshot.api({ params: { name: 'unittest.missing' }, deps: this.deps }), { status: 404, message: 'query not found (name=unittest.missing)' });
         })
     })
 
