@@ -3,12 +3,14 @@ const _ = require('lodash');
 
 const { State } = require('gell');
 
-const named = require('../named');
+const { compileParams } = require('../../gell-event/binding/compiler');
+const { object } = require('../../gell-dispatch/validate');
 
 /**
  * NOTE: gell-promote copy of gell-aws-dynamodb mock/write: namedOperation runs a named operation definition's modify
- * with named.modify (validates and coerces its request), looking definitions up in the store's registry
- * (options.operations: store.operations, a gell-discover Operations)
+ * with the request validated and coerced against its parameters (gell-dispatch/validate object; an
+ * ObjectValidationError lists every failing parameter), looking definitions up in the store's registry
+ * (options.operations: store.operations, a gell-metadata Registry)
  */
 /**
  * Mocks a write transaction
@@ -95,7 +97,9 @@ module.exports = function* write(store, options) {
 		if (key)
 			var item = await store.lookup(_.isFunction(key.snapshot) ? key.snapshot() : key);
 
-		return named.modify(request.name, def, item, request);
+		assert(def.modify, `named operation (name=${request.name}) does not define modify`);
+
+		return def.modify(item, object(request, compileParams(def.parameters)));
 	}
 
 	const OPERATIONS = {

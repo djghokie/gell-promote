@@ -8,7 +8,9 @@ const Store = require('gell-aws-dynamodb/store/single');
 const { Registry } = require('../gell-metadata/registry');
 const page = require('gell-aws-dynamodb/toolbox/page');
 
-const named = require('./named');
+const { compileParams } = require('../gell-event/binding/compiler');
+const { object } = require('../gell-dispatch/validate');
+
 const queries = require('./toolbox/queries');
 const write = require('./item/write');
 
@@ -17,7 +19,22 @@ const write = require('./item/write');
  *  - store.queries (gell-discover Queries) and store.operations (gell-discover Operations): register definitions on
  *    them (e.g. store.queries.registerModule(queries)), which asserts their parameter types
  *  - query, find, drain and page run a definition's query, and a transaction's named operation its operation, with
- *    the args validated and coerced (see named)
+ *    the args validated and coerced against the definition's parameters (gell-dispatch/validate object)
+ *
+ * a named query: { name, description, parameters, query, filter }
+ *  - query: the DynamoDB (dynamodb-toolbox) query, or a function of the args that returns it
+ *  - filter: (items, args) => the matching items, for the in-memory store (mock/store)
+ *
+ * a named operation: { name, description, parameters, operation, modify }
+ *  - operation: the DynamoDB command, or a function of the request that returns it
+ *  - modify: (item$, request) => the modified item, for the in-memory store (mock/store)
+ *
+ * parameters declare each parameter as a param does: its type's name, or { type, optional, validate }
+ *  - each call's args are validated and coerced first (an Error named ObjectValidationError lists every failing
+ *    parameter), and the definition gets the coerced args
+ *
+ * NOTE: a named operation's args are its request ({ name, key, values, ...args }); the definition gets the request
+ * with its parameters coerced
  *
  * NOTE: the npm store's maps (namedQueries, namedOperations) are removed; the registries replace them
  */
@@ -36,7 +53,7 @@ module.exports = class extends Store {
     }
 
     /**
-     * NOTE: as gell-aws-dynamodb store/single page, with the query resolved by named.query
+     * NOTE: as gell-aws-dynamodb store/single page, with the definition's query run on its args, validated and coerced
      */
     page(namedQuery, args={}) {
         assert(_.isString(namedQuery), 'named query is required');
@@ -44,7 +61,9 @@ module.exports = class extends Store {
         const def = this.queries.get(namedQuery);
         assert(def, `no named query (name=${namedQuery}) defined`);
 
-        const q = named.query(namedQuery, def, args);
+        assert(def.query, `named query (name=${namedQuery}) does not define a DynamoDB implementation`);
+        const coerced = object(args, compileParams(def.parameters));
+        const q = typeof def.query === 'function' ? def.query(coerced) : def.query;
         assert(q, `query (name=${namedQuery}) does not resolve to a toolbox query`);
 
         const { table, hash, options={} } = q;

@@ -5,11 +5,12 @@ const { State } = require('gell');
 
 const { query } = require('gell-aws-dynamodb/toolbox/stream');
 
-const named = require('../named');
+const { compileParams } = require('../../gell-event/binding/compiler');
+const { object } = require('../../gell-dispatch/validate');
 
 /**
- * NOTE: gell-promote copy of gell-aws-dynamodb toolbox/queries: runs a named query definition with named.query
- * (validates and coerces its args), looking definitions up in the store's registry (store.queries, a gell-discover
+ * NOTE: gell-promote copy of gell-aws-dynamodb toolbox/queries: runs a named query definition on its args, validated
+ * and coerced against its parameters (gell-dispatch/validate object), looking definitions up in the store's registry (store.queries, a gell-discover
  * Queries)
  */
 module.exports = function* queries(queries_, deps) {
@@ -26,7 +27,9 @@ module.exports = function* queries(queries_, deps) {
 		const def = queries_.get(namedQuery);
 		assert(def, `no named query (name=${namedQuery}) defined`);
 
-		const q = named.query(namedQuery, def, queryArgs);
+		assert(def.query, `named query (name=${namedQuery}) does not define a DynamoDB implementation`);
+		const coerced = object(queryArgs, compileParams(def.parameters));
+		const q = typeof def.query === 'function' ? def.query(coerced) : def.query;
 		assert(q, `query (name=${namedQuery}) does not resolve to a toolbox query`);
 
 		const { table, hash, options } = q;

@@ -15,7 +15,7 @@ const write = require('./write');
  *  - store.queries (gell-discover Queries) and store.operations (gell-discover Operations): register definitions on
  *    them (e.g. store.queries.registerModule(queries)), which asserts their parameter types
  *  - a named query runs its definition's filter, and a named operation its modify, with the args validated and
- *    coerced (see named)
+ *    coerced against the definition's parameters (gell-dispatch/validate object; see store)
  */
 module.exports = class extends Store {
 

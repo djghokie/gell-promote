@@ -79,6 +79,82 @@ describe('gell-aws-dynamodb stores', function() {
             assert.throws(() => store.page(QUERY.name, {}), isInvalid('type', 'required'));
         })
 
+        describe('a named query definition', function() {
+            const PARENT_ID = '3f2b8c1e-9d4a-4e6b-8a7c-1d2e3f4a5b6c';
+
+            let received;
+
+            beforeEach(function() {
+                received = undefined;
+
+                store.queries.register({
+                    name: 'unittest.by.parent',
+                    parameters: {
+                        type: { type: 'string', validate: { minLength: 4 } },
+                        limit: { type: 'number', optional: true, validate: { min: 1 } },
+                        parentId: { type: 'uuid', optional: true },
+                    },
+                    query: args => {
+                        received = args;
+
+                        return { table: 'table.unittest', hash: args.type, options: {} };
+                    },
+                });
+            })
+
+            it('gets the coerced args', async function() {
+                await store.drain('unittest.by.parent', { type: 'GELL#SESSION', limit: '2', parentId: PARENT_ID });
+
+                assert.deepStrictEqual(received, { type: 'GELL#SESSION', limit: 2, parentId: PARENT_ID });
+            })
+
+            it('does not get an omitted optional parameter', async function() {
+                await store.drain('unittest.by.parent', { type: 'GELL#SESSION' });
+
+                assert.deepStrictEqual(received, { type: 'GELL#SESSION' });
+            })
+
+            it('is not run when its args fail validation, and every failing parameter is reported', function() {
+                assert.throws(() => store.query('unittest.by.parent', { limit: -5, parentId: 'note-1' }), e => {
+                    assert.strictEqual(e.name, 'ObjectValidationError');
+                    assert.deepStrictEqual(e.errors.map(({ property, rule }) => ({ property, rule })), [
+                        { property: 'type', rule: 'required' },
+                        { property: 'limit', rule: 'min' },
+                        { property: 'parentId', rule: 'isUuid' },
+                    ]);
+
+                    return true;
+                });
+                assert.strictEqual(received, undefined);
+            })
+        })
+
+        it('reports a required parameter of a named query called without args', function() {
+            assert.throws(() => store.query(QUERY.name), isInvalid('type', 'required'));
+            assert.throws(() => store.page(QUERY.name), isInvalid('type', 'required'));
+        })
+
+        it('runs a static query of a named query definition', async function() {
+            store.queries.register({ name: 'unittest.fixed', query: { table: 'table.unittest', hash: 'FIXED', options: {} } });
+
+            await store.drain('unittest.fixed');
+            assert.strictEqual(table.lastQuery.hash, 'FIXED');
+        })
+
+        it('passes args through to the query of a definition without parameters', async function() {
+            store.queries.register({ name: 'unittest.open', query: ({ hash }) => ({ table: 'table.unittest', hash, options: {} }) });
+
+            await store.drain('unittest.open', { hash: 'OPEN' });
+            assert.strictEqual(table.lastQuery.hash, 'OPEN');
+        })
+
+        it('throws for a named query that does not define a DynamoDB implementation', function() {
+            store.queries.register({ name: 'unittest.filterOnly', filter: items => items });
+
+            assert.throws(() => store.query('unittest.filterOnly', {}), /named query \(name=unittest.filterOnly\) does not define a DynamoDB implementation/);
+            assert.throws(() => store.page('unittest.filterOnly', {}), /named query \(name=unittest.filterOnly\) does not define a DynamoDB implementation/);
+        })
+
         it('commits a named operation with its coerced request', async function() {
             const $txn = store.write();
             $txn.next({ name: OPERATION.name, key: { type: 'T', id: '1' }, ts: '1000' });
@@ -96,6 +172,40 @@ describe('gell-aws-dynamodb stores', function() {
             $txn.next({ name: OPERATION.name, key: { type: 'T', id: '1' }, ts: 'someday' });
 
             await assert.rejects(async () => $txn.return().value, isInvalid('ts', 'isTimestamp'));
+            assert.strictEqual(sent.length, 0);
+        })
+
+        // NOTE: as for a param, a blank (null or '') required argument counts as missing
+        it('fails to commit a named operation with a blank required parameter', async function() {
+            const $txn = store.write();
+            $txn.next({ name: OPERATION.name, key: { type: 'T', id: '1' }, ts: '' });
+
+            await assert.rejects(async () => $txn.return().value, isInvalid('ts', 'required'));
+            assert.strictEqual(sent.length, 0);
+        })
+
+        it('commits a copy of a static operation command', async function() {
+            const command = { Update: { UpdateExpression: 'SET done=:done', ExpressionAttributeValues: { ':done': true } } };
+            store.operations.register({ name: 'unittest.done', operation: command });
+
+            for (const id of ['1', '2']) {
+                const $txn = store.write();
+                $txn.next({ name: 'unittest.done', key: { type: 'T', id } });
+                await $txn.return().value;
+            }
+
+            assert.deepStrictEqual(sent.map(({ input }) => input.TransactItems[0].Update.Key), [{ type: 'T', id: '1' }, { type: 'T', id: '2' }]);
+            assert.strictEqual(sent[0].input.TransactItems[0].Update.UpdateExpression, 'SET done=:done');
+            assert.deepStrictEqual(command, { Update: { UpdateExpression: 'SET done=:done', ExpressionAttributeValues: { ':done': true } } });
+        })
+
+        it('fails to commit a named operation that does not define its command', async function() {
+            store.operations.register({ name: 'unittest.modifyOnly', modify: item$ => item$ });
+
+            const $txn = store.write();
+            $txn.next({ name: 'unittest.modifyOnly', key: { type: 'T', id: '1' } });
+
+            await assert.rejects(async () => $txn.return().value, /named operation \(name=unittest.modifyOnly\) does not define a DynamoDB implementation/);
             assert.strictEqual(sent.length, 0);
         })
 
@@ -144,6 +254,22 @@ describe('gell-aws-dynamodb stores', function() {
             assert.deepStrictEqual((await store.drain(QUERY.name, { type: 'FOOBAR' })).map(item$ => item$.id), ['3']);
         })
 
+        it('reports a required parameter of a named query called without args', function() {
+            assert.throws(() => store.query(QUERY.name), isInvalid('type', 'required'));
+        })
+
+        it('passes args through to the filter of a definition without parameters', async function() {
+            store.queries.register({ name: 'unittest.byId', filter: (items, { id }) => items.filter(item$ => item$.id === id) });
+
+            assert.deepStrictEqual((await store.drain('unittest.byId', { id: '2' })).map(item$ => item$.id), ['2']);
+        })
+
+        it('throws for a named query that does not define a filter', function() {
+            store.queries.register({ name: 'unittest.queryOnly', query: {} });
+
+            assert.throws(() => store.query('unittest.queryOnly', {}), /named query \(name=unittest.queryOnly\) does not define a filter/);
+        })
+
         it('runs a named operation modify with its coerced request', async function() {
             const $txn = store.write();
             $txn.next({ name: OPERATION.name, key: { type: 'GELLO', id: '1' }, ts: '1000' });
@@ -160,5 +286,21 @@ describe('gell-aws-dynamodb stores', function() {
             assert.strictEqual(store.select({ id: '1' })[0].ts, undefined);
         })
 
+        // NOTE: as for a param, a blank (null or '') required argument counts as missing
+        it('fails to commit a named operation with a blank required parameter', async function() {
+            const $txn = store.write();
+            $txn.next({ name: OPERATION.name, key: { type: 'GELLO', id: '1' }, ts: null });
+
+            await assert.rejects(async () => $txn.return().value, isInvalid('ts', 'required'));
+        })
+
+        it('fails to commit a named operation that does not define modify', async function() {
+            store.operations.register({ name: 'unittest.operationOnly', operation: {} });
+
+            const $txn = store.write();
+            $txn.next({ name: 'unittest.operationOnly', key: { type: 'GELLO', id: '1' } });
+
+            await assert.rejects(async () => $txn.return().value, /named operation \(name=unittest.operationOnly\) does not define modify/);
+        })
     })
 })

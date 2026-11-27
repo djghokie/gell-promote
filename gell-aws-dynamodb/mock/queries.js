@@ -3,12 +3,14 @@ const _ = require('lodash');
 
 const { State } = require('gell');
 
-const named = require('../named');
+const { compileParams } = require('../../gell-event/binding/compiler');
+const { object } = require('../../gell-dispatch/validate');
 
 /**
- * NOTE: gell-promote copy of gell-aws-dynamodb mock/queries: runs a named query definition's filter with
- * named.filter (validates and coerces its args), looking definitions up in the store's registry (store.queries, a
- * gell-discover Queries); a query error is yielded (the future survives it)
+ * NOTE: gell-promote copy of gell-aws-dynamodb mock/queries: runs a named query definition's filter with the args
+ * validated and coerced against its parameters (gell-dispatch/validate object; an ObjectValidationError lists every
+ * failing parameter), looking definitions up in the store's registry (store.queries, a gell-metadata Registry); a
+ * query error is yielded (the future survives it)
  */
 /**
  * Implements named queries for mock implementations.  Yields stream of items returned from the
@@ -18,7 +20,7 @@ const named = require('../named');
  * 	- a named query definition's filter is called with (items, queryArgs)
  * 	- named query can return an array, which will be converted to a stream (iterator)
  * 
- * @param {*} queries_ the store's query registry (gell-discover Queries)
+ * @param {*} queries_ the store's query registry (gell-metadata Registry)
  * @param {*} items 
  */
 module.exports = function* queries(queries_, items) {
@@ -33,7 +35,9 @@ module.exports = function* queries(queries_, items) {
 		const def = queries_.get(namedQuery);
 		assert(def, `no named query (name=${namedQuery}) defined`);
 
-		const result = named.filter(namedQuery, def, items, queryArgs);
+		assert(def.filter, `named query (name=${namedQuery}) does not define a filter`);
+
+		const result = def.filter(items, object(queryArgs, compileParams(def.parameters)));
 
 		if (_.isUndefined(result)) return;  // WIP: is this right?
 		if (_.isArray(result)) return result.values();

@@ -5,12 +5,14 @@ const { State } = require('gell');
 
 const { TransactWriteCommand } = require("@aws-sdk/lib-dynamodb");
 
-const named = require('../named');
+const { compileParams } = require('../../gell-event/binding/compiler');
+const { object } = require('../../gell-dispatch/validate');
 
 /**
- * NOTE: gell-promote copy of gell-aws-dynamodb item/write: namedOperation runs a named operation definition with
- * named.operation (validates and coerces its request), looking definitions up in the store's registry
- * (options.operations: store.operations, a gell-discover Operations); a definition declares its command as operation
+ * NOTE: gell-promote copy of gell-aws-dynamodb item/write: namedOperation runs a named operation definition with the
+ * request validated and coerced against its parameters (gell-dispatch/validate object; an ObjectValidationError lists
+ * every failing parameter), looking definitions up in the store's registry (options.operations: store.operations, a
+ * gell-metadata Registry); a definition declares its command as operation (the command, or a function of the request)
  */
 /**
  * Implements a "transaction write" future.  Each call to next represents an operation in the
@@ -128,8 +130,14 @@ module.exports = function* write(tableName, deps, options={}) {
 	function namedOperation(request) {
 		const def = operations_.get(request.name);
 
-		// NOTE: copied, as explicit fills in the command (a static operation is shared by every request)
-		const command = Object.assign({}, named.operation(request.name, def, request));
+		assert(def.operation, `named operation (name=${request.name}) does not define a DynamoDB implementation`);
+
+		const coerced = object(request, compileParams(def.parameters));
+		const operation = typeof def.operation === 'function' ? def.operation(coerced) : def.operation;
+
+		// NOTE: the command and its body are copied, as explicit fills in the body (Key, TableName); a static operation
+		// is shared by every request
+		const command = _.mapValues(operation, body => Object.assign({}, body));
 
 		const { key, values } = request;
 
